@@ -47,8 +47,8 @@ export default function UsersPage() {
         {[
           { label: 'ผู้ใช้ทั้งหมด', value: users.length, color: 'text-[#1B3875]' },
           { label: 'ใช้งานอยู่', value: users.filter(u => u.active).length, color: 'text-green-600' },
-          { label: 'บทบาทที่ใช้', value: [...new Set(users.map(u => u.role))].length, color: 'text-purple-600' },
-          { label: 'แผนก', value: [...new Set(users.map(u => u.department))].length, color: 'text-blue-600' },
+          { label: 'บทบาทที่ใช้', value: Array.from(new Set(users.map(u => u.role))).length, color: 'text-purple-600' },
+          { label: 'แผนก', value: Array.from(new Set(users.map(u => u.department))).length, color: 'text-blue-600' },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="text-xs text-gray-500 mb-1">{k.label}</div>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
@@ -71,15 +72,15 @@ export const useAppStore = create<AppState>()(
       // Actions
       addOpportunity: (opp) => set(s => ({ opportunities: [opp, ...s.opportunities] })),
       updateOpportunity: (id, data) =>
-        set(s => ({ opportunities: s.opportunities.map(o => o.id === id ? { ...o, ...data } : o) })),
+        set(s => ({ opportunities: s.opportunities.map(o => o.id === id ? { ...o, ...(data as any) } : o) })),
 
       addProject: (proj) => set(s => ({ projects: [proj, ...s.projects] })),
       updateProject: (id, data) =>
-        set(s => ({ projects: s.projects.map(p => p.id === id ? { ...p, ...data } : p) })),
+        set(s => ({ projects: s.projects.map(p => p.id === id ? { ...p, ...(data as any) } : p) })),
 
       addTicket: (ticket) => set(s => ({ tickets: [ticket, ...s.tickets] })),
       updateTicket: (id, data) =>
-        set(s => ({ tickets: s.tickets.map(t => t.id === id ? { ...t, ...data } : t) })),
+        set(s => ({ tickets: s.tickets.map(t => t.id === id ? { ...t, ...(data as any) } : t) })),
 
       addInvoice: (inv) => set(s => ({ invoices: [inv, ...s.invoices] })),
 

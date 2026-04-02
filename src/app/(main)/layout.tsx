@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store'
+import { hasSupabase } from '@/lib/supabase'
 import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 import { usePathname } from 'next/navigation'
@@ -26,7 +27,7 @@ function usePageTitle() {
 }
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAppStore()
+  const { currentUser, initialized, initialize } = useAppStore()
   const router = useRouter()
   const title = usePageTitle()
 
@@ -34,7 +35,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (!currentUser) router.replace('/')
   }, [currentUser, router])
 
+  useEffect(() => {
+    if (currentUser && !initialized) {
+      initialize()
+    }
+  }, [currentUser, initialized, initialize])
+
   if (!currentUser) return null
+
+  const isLoading = hasSupabase && !initialized
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F4F6FA]">
@@ -42,7 +51,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header title={title} />
         <main className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-          {children}
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1B3875] mx-auto mb-4" />
+                <p className="text-sm text-gray-500">กำลังโหลดข้อมูล...</p>
+              </div>
+            </div>
+          ) : children}
         </main>
       </div>
     </div>

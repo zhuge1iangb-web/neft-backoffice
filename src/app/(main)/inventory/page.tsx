@@ -21,7 +21,10 @@ export default function InventoryPage() {
   const [showModal, setShowModal] = useState(false)
   const [showDetail, setShowDetail] = useState<number | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    code: string; name: string; category: string; brand: string; model: string;
+    qty: number; unitCost: number; location: string; projectId: number | null; status: string;
+  }>({
     code: '', name: '', category: 'Network', brand: '', model: '', qty: 0,
     unitCost: 0, location: '', projectId: null, status: 'In Stock'
   })

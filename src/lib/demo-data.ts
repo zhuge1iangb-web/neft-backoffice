@@ -19,21 +19,21 @@ export const demoCustomers = [
 ]
 
 export const demoOpportunities = [
-  { id: 1, no: 'OPP-2026-001', name: 'Network Infrastructure Upgrade', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด', owner: 'สมชาย ใจดี', stage: 'Negotiation', value: 4500000, cost: 3200000, gp: 1300000, probability: 60, expectedClose: '2026-04-30', lastActivity: '2026-04-01', nextFollowUp: '2026-04-05', status: 'active' },
-  { id: 2, no: 'OPP-2026-002', name: 'Core Banking Security Solution', customerId: 2, customerName: 'ธนาคารกรุงไทย', owner: 'สมชาย ใจดี', stage: 'Proposal Submitted', value: 12000000, cost: 8500000, gp: 3500000, probability: 40, expectedClose: '2026-05-15', lastActivity: '2026-03-28', nextFollowUp: '2026-04-08', status: 'active' },
-  { id: 3, no: 'OPP-2026-003', name: 'ERP Implementation Phase 2', customerId: 3, customerName: 'SCG Group', owner: 'สมชาย ใจดี', stage: 'Requirement Gathered', value: 8000000, cost: 5500000, gp: 2500000, probability: 30, expectedClose: '2026-06-30', lastActivity: '2026-04-02', nextFollowUp: '2026-04-10', status: 'active' },
-  { id: 4, no: 'OPP-2026-004', name: 'Cloud Migration Project', customerId: 4, customerName: 'บริษัท ซีพีเอฟ จำกัด (มหาชน)', owner: 'สมชาย ใจดี', stage: 'Won', value: 6200000, cost: 4100000, gp: 2100000, probability: 100, expectedClose: '2026-03-31', lastActivity: '2026-03-31', nextFollowUp: null, status: 'won' },
-  { id: 5, no: 'OPP-2026-005', name: 'Cybersecurity Assessment', customerId: 5, customerName: 'PTT Digital', owner: 'สมชาย ใจดี', stage: 'Qualified', value: 2800000, cost: 1900000, gp: 900000, probability: 25, expectedClose: '2026-07-15', lastActivity: '2026-04-01', nextFollowUp: '2026-04-07', status: 'active' },
-  { id: 6, no: 'OPP-2026-006', name: 'Data Center Consolidation', customerId: 6, customerName: 'AIS', owner: 'สมชาย ใจดี', stage: 'Lost', value: 15000000, cost: 0, gp: 0, probability: 0, expectedClose: '2026-03-15', lastActivity: '2026-03-15', nextFollowUp: null, status: 'lost' },
-  { id: 7, no: 'OPP-2025-089', name: 'SD-WAN Deployment', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด', owner: 'สมชาย ใจดี', stage: 'New Lead', value: 3100000, cost: 2200000, gp: 900000, probability: 10, expectedClose: '2026-08-30', lastActivity: '2026-04-02', nextFollowUp: '2026-04-12', status: 'active' },
+  { id: 1, no: 'OPP-2026-001', name: 'Network Infrastructure Upgrade', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด', owner: 'สมชาย ใจดี', stage: 'Negotiation', value: 4500000, cost: 3200000, gp: 1300000, gpPct: 28.9, probability: 60, expectedClose: '2026-04-30', lastActivity: '2026-04-01', nextFollowUp: '2026-04-05', status: 'active', quotationIds: [], deliveryPeriod: '45 วัน', paymentTerm: 'Net 30', projectType: 'Network' },
+  { id: 2, no: 'OPP-2026-002', name: 'Core Banking Security Solution', customerId: 2, customerName: 'ธนาคารกรุงไทย', owner: 'สมชาย ใจดี', stage: 'Proposal Submitted', value: 12000000, cost: 8500000, gp: 3500000, gpPct: 29.2, probability: 40, expectedClose: '2026-05-15', lastActivity: '2026-03-28', nextFollowUp: '2026-04-08', status: 'active', quotationIds: [], deliveryPeriod: '90 วัน', paymentTerm: '50/50', projectType: 'Security' },
+  { id: 3, no: 'OPP-2026-003', name: 'ERP Implementation Phase 2', customerId: 3, customerName: 'SCG Group', owner: 'สมชาย ใจดี', stage: 'Requirement Gathered', value: 8000000, cost: 5500000, gp: 2500000, gpPct: 31.2, probability: 30, expectedClose: '2026-06-30', lastActivity: '2026-04-02', nextFollowUp: '2026-04-10', status: 'active', quotationIds: [], deliveryPeriod: '6 เดือน', paymentTerm: 'Milestone-based', projectType: 'Software' },
+  { id: 4, no: 'OPP-2026-004', name: 'Cloud Migration Project', customerId: 4, customerName: 'บริษัท ซีพีเอฟ จำกัด (มหาชน)', owner: 'สมชาย ใจดี', stage: 'Won', value: 6200000, cost: 4100000, gp: 2100000, gpPct: 33.9, probability: 100, expectedClose: '2026-03-31', lastActivity: '2026-03-31', nextFollowUp: null, status: 'won', quotationIds: [1], deliveryPeriod: '60 วัน', paymentTerm: '30% Deposit / 70% Delivery', projectType: 'Cloud' },
+  { id: 5, no: 'OPP-2026-005', name: 'Cybersecurity Assessment', customerId: 5, customerName: 'PTT Digital', owner: 'สมชาย ใจดี', stage: 'Qualified', value: 2800000, cost: 1900000, gp: 900000, gpPct: 32.1, probability: 25, expectedClose: '2026-07-15', lastActivity: '2026-04-01', nextFollowUp: '2026-04-07', status: 'active', quotationIds: [], deliveryPeriod: '30 วัน', paymentTerm: 'Net 45', projectType: 'Security' },
+  { id: 6, no: 'OPP-2026-006', name: 'Data Center Consolidation', customerId: 6, customerName: 'AIS', owner: 'สมชาย ใจดี', stage: 'Lost', value: 15000000, cost: 0, gp: 0, gpPct: 0, probability: 0, expectedClose: '2026-03-15', lastActivity: '2026-03-15', nextFollowUp: null, status: 'lost', quotationIds: [], deliveryPeriod: null, paymentTerm: null, projectType: null },
+  { id: 7, no: 'OPP-2025-089', name: 'SD-WAN Deployment', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด', owner: 'สมชาย ใจดี', stage: 'New Lead', value: 3100000, cost: 2200000, gp: 900000, gpPct: 29.0, probability: 10, expectedClose: '2026-08-30', lastActivity: '2026-04-02', nextFollowUp: '2026-04-12', status: 'active', quotationIds: [], deliveryPeriod: '60 วัน', paymentTerm: 'Net 60', projectType: 'Network' },
 ]
 
 export const demoProjects = [
-  { id: 1, code: 'PRJ-2026-001', name: 'Cloud Migration - CPF', customerId: 4, customerName: 'บริษัท ซีพีเอฟ จำกัด (มหาชน)', pm: 'วิรัตน์ ทองดี', type: 'Implementation', contractValue: 6200000, gpTarget: 33, startDate: '2026-04-01', targetEnd: '2026-09-30', status: 'In Progress', progress: 15, latestUpdate: 'เริ่มต้น Kickoff Meeting และทำ Site Survey', blocker: null, sourceOppId: 4 },
-  { id: 2, code: 'PRJ-2025-042', name: 'Network Upgrade - Thai Metal', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด', pm: 'วิรัตน์ ทองดี', type: 'Implementation', contractValue: 3800000, gpTarget: 28, startDate: '2025-11-01', targetEnd: '2026-04-30', status: 'Delayed', progress: 65, latestUpdate: 'ล่าช้าเนื่องจากอุปกรณ์ขาดสต็อก', blocker: 'รออุปกรณ์ Cisco Switch จาก Distributor', sourceOppId: null },
-  { id: 3, code: 'PRJ-2025-038', name: 'Security Implementation - KTB', customerId: 2, customerName: 'ธนาคารกรุงไทย', pm: 'วิรัตน์ ทองดี', type: 'Security', contractValue: 9500000, gpTarget: 30, startDate: '2025-09-01', targetEnd: '2026-06-30', status: 'In Progress', progress: 45, latestUpdate: 'Firewall ติดตั้งแล้ว อยู่ระหว่าง Testing', blocker: null, sourceOppId: null },
-  { id: 4, code: 'PRJ-2025-029', name: 'ERP Phase 1 - PTT Digital', customerId: 5, customerName: 'PTT Digital', pm: 'วิรัตน์ ทองดี', type: 'Software', contractValue: 5500000, gpTarget: 35, startDate: '2025-07-01', targetEnd: '2026-03-31', status: 'Completed', progress: 100, latestUpdate: 'โครงการเสร็จสมบูรณ์ ส่งมอบแล้ว', blocker: null, sourceOppId: null },
-  { id: 5, code: 'PRJ-2026-002', name: 'Wireless Infra - AIS Branch', customerId: 6, customerName: 'AIS', pm: 'วิรัตน์ ทองดี', type: 'Infrastructure', contractValue: 2100000, gpTarget: 25, startDate: '2026-03-01', targetEnd: '2026-06-30', status: 'Planning', progress: 5, latestUpdate: 'อยู่ระหว่างจัดทำแผน และ BOQ', blocker: null, sourceOppId: null },
+  { id: 1, code: 'PRJ-2026-001', name: 'Cloud Migration - CPF', customerId: 4, customerName: 'บริษัท ซีพีเอฟ จำกัด (มหาชน)', pm: 'วิรัตน์ ทองดี', type: 'Implementation', contractValue: 6200000, estimatedCost: 4100000, gp: 2100000, gpPct: 33.9, gpTarget: 33, startDate: '2026-04-01', targetEnd: '2026-09-30', status: 'In Progress', progress: 15, latestUpdate: 'เริ่มต้น Kickoff Meeting และทำ Site Survey', blocker: null, sourceOppId: 4, oppNo: 'OPP-2026-004', quotationId: 1, paymentTerm: '30% Deposit / 70% Delivery', deliveryPeriod: '60 วัน' },
+  { id: 2, code: 'PRJ-2025-042', name: 'Network Upgrade - Thai Metal', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด', pm: 'วิรัตน์ ทองดี', type: 'Implementation', contractValue: 3800000, estimatedCost: 2800000, gp: 1000000, gpPct: 26.3, gpTarget: 28, startDate: '2025-11-01', targetEnd: '2026-04-30', status: 'Delayed', progress: 65, latestUpdate: 'ล่าช้าเนื่องจากอุปกรณ์ขาดสต็อก', blocker: 'รออุปกรณ์ Cisco Switch จาก Distributor', sourceOppId: null, oppNo: null, quotationId: null, paymentTerm: 'Net 30', deliveryPeriod: '45 วัน' },
+  { id: 3, code: 'PRJ-2025-038', name: 'Security Implementation - KTB', customerId: 2, customerName: 'ธนาคารกรุงไทย', pm: 'วิรัตน์ ทองดี', type: 'Security', contractValue: 9500000, estimatedCost: 6650000, gp: 2850000, gpPct: 30.0, gpTarget: 30, startDate: '2025-09-01', targetEnd: '2026-06-30', status: 'In Progress', progress: 45, latestUpdate: 'Firewall ติดตั้งแล้ว อยู่ระหว่าง Testing', blocker: null, sourceOppId: null, oppNo: null, quotationId: null, paymentTerm: '50/50', deliveryPeriod: '90 วัน' },
+  { id: 4, code: 'PRJ-2025-029', name: 'ERP Phase 1 - PTT Digital', customerId: 5, customerName: 'PTT Digital', pm: 'วิรัตน์ ทองดี', type: 'Software', contractValue: 5500000, estimatedCost: 3575000, gp: 1925000, gpPct: 35.0, gpTarget: 35, startDate: '2025-07-01', targetEnd: '2026-03-31', status: 'Completed', progress: 100, latestUpdate: 'โครงการเสร็จสมบูรณ์ ส่งมอบแล้ว', blocker: null, sourceOppId: null, oppNo: null, quotationId: null, paymentTerm: 'Milestone-based', deliveryPeriod: '6 เดือน' },
+  { id: 5, code: 'PRJ-2026-002', name: 'Wireless Infra - AIS Branch', customerId: 6, customerName: 'AIS', pm: 'วิรัตน์ ทองดี', type: 'Infrastructure', contractValue: 2100000, estimatedCost: 1575000, gp: 525000, gpPct: 25.0, gpTarget: 25, startDate: '2026-03-01', targetEnd: '2026-06-30', status: 'Planning', progress: 5, latestUpdate: 'อยู่ระหว่างจัดทำแผน และ BOQ', blocker: null, sourceOppId: null, oppNo: null, quotationId: null, paymentTerm: 'Net 45', deliveryPeriod: '30 วัน' },
 ]
 
 export const demoMilestones = [
@@ -109,3 +109,50 @@ export const projectStatusData = [
   { name: 'Delayed',         value: 1, color: '#EF4444' },
   { name: 'Completed',       value: 1, color: '#22C55E' },
 ]
+
+// ─── NEW DATA TYPES FOR REDESIGN ─────────────────────────────────────────────
+
+export const demoVendors = [
+  { id: 1, code: 'VND-001', name: 'Cisco Systems Thailand', type: 'Vendor' as const, contact: 'คุณสมศักดิ์', phone: '02-100-1000', email: 'sales@cisco.co.th', taxId: '0105541234001' },
+  { id: 2, code: 'VND-002', name: 'บริษัท อินเทรน จำกัด', type: 'Distributor' as const, contact: 'คุณวิภา', phone: '02-200-2000', email: 'sales@intrain.co.th', taxId: '0105551234002' },
+  { id: 3, code: 'VND-003', name: 'บริษัท ซิสเทม เน็ต จำกัด', type: 'Supplier' as const, contact: 'คุณประสิทธิ์', phone: '02-300-3000', email: 'info@systemnet.co.th', taxId: '0105561234003' },
+]
+
+export const demoQuotations = [
+  {
+    id: 1, no: 'QT-2026-001', oppId: 1, oppNo: 'OPP-2026-001', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด',
+    items: [
+      { id: 1, description: 'Cisco Catalyst 9300 Switch 48-port', qty: 4, unitPrice: 450000, cost: 320000, vendorId: 1, vendorName: 'Cisco Systems Thailand' },
+      { id: 2, description: 'Cisco ISR 4331 Router', qty: 2, unitPrice: 180000, cost: 130000, vendorId: 2, vendorName: 'บริษัท อินเทรน จำกัด' },
+      { id: 3, description: 'Installation & Configuration Service', qty: 1, unitPrice: 120000, cost: 60000, vendorId: null, vendorName: 'NEFT Internal' },
+    ],
+    totalPrice: 2100000, totalCost: 1430000, gp: 670000, gpPct: 31.9,
+    status: 'Approved' as const, createdAt: '2026-03-15', validUntil: '2026-04-15', notes: 'รวม VAT 7%'
+  },
+]
+
+export const demoPurchaseOrders = [
+  {
+    id: 1, no: 'PO-2026-001', vendorId: 1, vendorName: 'Cisco Systems Thailand', projectId: 1, projectName: 'Cloud Migration - CPF',
+    items: [{ description: 'Cisco Catalyst 9300', qty: 4, unitPrice: 320000, total: 1280000 }],
+    total: 1280000, status: 'Sent' as const, createdAt: '2026-04-01', expectedDelivery: '2026-04-20', notes: ''
+  },
+]
+
+export const demoInventory = [
+  { id: 1, code: 'INV-0001', name: 'Cisco Catalyst 9300 Switch', category: 'Network', brand: 'Cisco', model: 'C9300-48P', qty: 2, unitCost: 320000, location: 'Warehouse A', projectId: null, status: 'In Stock' as const },
+  { id: 2, code: 'INV-0002', name: 'Cisco ISR 4331 Router', category: 'Network', brand: 'Cisco', model: 'ISR4331/K9', qty: 1, unitCost: 130000, location: 'Project Site - CPF HQ', projectId: 1, status: 'Deployed' as const },
+  { id: 3, code: 'INV-0003', name: 'FortiGate 200F Firewall', category: 'Security', brand: 'Fortinet', model: 'FG-200F', qty: 3, unitCost: 280000, location: 'Warehouse A', projectId: null, status: 'In Stock' as const },
+  { id: 4, code: 'INV-0004', name: 'UPS APC Smart-UPS 3000VA', category: 'Power', brand: 'APC', model: 'SMT3000I', qty: 1, unitCost: 45000, location: 'Reserved - KTB Project', projectId: 3, status: 'Reserved' as const },
+]
+
+export const demoProjectTypes = ['Implementation', 'Infrastructure', 'Security', 'Software', 'Cloud', 'Network']
+export const demoPaymentTerms = ['Net 30', 'Net 45', 'Net 60', '30% Deposit / 70% Delivery', '50/50', 'Milestone-based']
+export const demoDeliveryPeriods = ['30 วัน', '45 วัน', '60 วัน', '90 วัน', '6 เดือน', '12 เดือน']
+
+export function generateNo(prefix: string, existing: { no: string }[]): string {
+  const year = new Date().getFullYear()
+  const same = existing.filter(e => e.no.includes(`${prefix}-${year}`))
+  const next = same.length + 1
+  return `${prefix}-${year}-${String(next).padStart(3, '0')}`
+}

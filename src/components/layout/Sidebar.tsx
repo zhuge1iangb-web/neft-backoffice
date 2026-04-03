@@ -7,7 +7,8 @@ import { clsx } from 'clsx'
 import {
   HomeIcon, BriefcaseIcon, FolderOpenIcon, CurrencyDollarIcon,
   WrenchScrewdriverIcon, BellIcon, UsersIcon, CircleStackIcon,
-  ArrowRightOnRectangleIcon, BuildingOffice2Icon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon
+  ArrowRightOnRectangleIcon, BuildingOffice2Icon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
+  ShoppingCartIcon, ArchiveBoxIcon
 } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 
@@ -17,6 +18,8 @@ const navItems = (t: typeof translations.th) => [
   { href: '/projects',       label: t.nav.projects,       icon: FolderOpenIcon },
   { href: '/finance',        label: t.nav.finance,        icon: CurrencyDollarIcon },
   { href: '/service',        label: t.nav.service,        icon: WrenchScrewdriverIcon },
+  { href: '/purchasing',     label: t.nav.purchasing,     icon: ShoppingCartIcon },
+  { href: '/inventory',      label: t.nav.inventory,      icon: ArchiveBoxIcon },
   { href: '/notifications',  label: t.nav.notifications,  icon: BellIcon, badge: true },
   { href: '/users',          label: t.nav.users,          icon: UsersIcon },
   { href: '/master',         label: t.nav.master,         icon: CircleStackIcon },

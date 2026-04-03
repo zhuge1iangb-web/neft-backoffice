@@ -38,12 +38,13 @@ export default function ProjectsPage() {
 
   const handleSaveProject = () => {
     const cust = customers.find(c => c.id === +form.customerId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     addProject({
       id: Date.now(), code: form.code || `PRJ-2026-${String(Date.now()).slice(-3)}`,
       name: form.name, customerId: +form.customerId, customerName: cust?.name || '',
       pm: form.pm, type: form.type, contractValue: +form.contractValue || 0, estimatedCost: 0, gp: 0, gpPct: 0,
       gpTarget: +form.gpTarget || 0, startDate: form.startDate, targetEnd: form.targetEnd,
-      status: 'Planning', progress: 0, latestUpdate: '', blocker: null, sourceOppId: null, oppNo: null, quotationId: null, paymentTerm: null, deliveryPeriod: null
+      status: 'Planning', progress: 0, latestUpdate: '', blocker: null, sourceOppId: null, oppNo: null, quotationId: null, paymentTerm: null as any, deliveryPeriod: null as any
     })
     setShowModal(false)
     setForm({ code:'',name:'',customerId:'',pm:'',type:'Implementation',contractValue:'',gpTarget:'',startDate:'',targetEnd:'' })

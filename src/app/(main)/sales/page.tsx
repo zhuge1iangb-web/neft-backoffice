@@ -78,7 +78,7 @@ export default function SalesPage() {
       description: i.description, qty: +i.qty, unitPrice: +i.unitPrice, cost: 0, vendorId: null, vendorName: ''
     }))
     const totalPrice = items.reduce((s, i) => s + (i.qty * i.unitPrice), 0)
-    const qt = { id: Date.now(), no: `QT-2026-${String(quotations.length + 1).padStart(3, '0')}`, oppId: +quotationForm.oppId, oppNo: opp.no, customerId: opp.customerId, customerName: opp.customerName, items, totalPrice, totalCost: 0, gp: totalPrice, gpPct: 100, status: 'Draft' as const, createdAt: new Date().toISOString().split('T')[0], validUntil: '', notes: '' }
+    const qt = { id: Date.now(), no: `QT-2026-${String(quotations.length + 1).padStart(3, '0')}`, oppId: +quotationForm.oppId, oppNo: opp.no, customerId: opp.customerId, customerName: opp.customerName, items, totalPrice, totalCost: 0, gp: totalPrice, gpPct: 100, status: 'Draft' as 'Draft' | 'Sent' | 'Approved' | 'Rejected', createdAt: new Date().toISOString().split('T')[0], validUntil: '', notes: '' }
     addQuotation(qt)
     setShowQuotationModal(false)
     setQuotationForm({ oppId: '', items: [{ description: '', qty: '', unitPrice: '' }] })
@@ -379,7 +379,7 @@ export default function SalesPage() {
                         <h3 className="font-bold text-gray-800">{q.no}</h3>
                         <p className="text-xs text-gray-400">{q.customerName} • {opp?.name}</p>
                       </div>
-                      <Badge variant={q.status === 'Approved' ? 'success' : q.status === 'Rejected' ? 'error' : 'warning'}>{q.status}</Badge>
+                      <Badge variant={q.status === 'Approved' ? 'success' : q.status === 'Rejected' ? 'danger' : 'warning'}>{q.status}</Badge>
                     </div>
                     <div className="overflow-x-auto mb-3">
                       <table className="w-full text-xs">

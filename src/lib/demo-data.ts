@@ -127,7 +127,7 @@ export const demoQuotations = [
       { id: 3, description: 'Installation & Configuration Service', qty: 1, unitPrice: 120000, cost: 60000, vendorId: null, vendorName: 'NEFT Internal' },
     ],
     totalPrice: 2100000, totalCost: 1430000, gp: 670000, gpPct: 31.9,
-    status: 'Approved' as const, createdAt: '2026-03-15', validUntil: '2026-04-15', notes: 'รวม VAT 7%'
+    status: 'Approved' as 'Draft' | 'Sent' | 'Approved' | 'Rejected', createdAt: '2026-03-15', validUntil: '2026-04-15', notes: 'รวม VAT 7%'
   },
 ]
 
@@ -135,7 +135,7 @@ export const demoPurchaseOrders = [
   {
     id: 1, no: 'PO-2026-001', vendorId: 1, vendorName: 'Cisco Systems Thailand', projectId: 1, projectName: 'Cloud Migration - CPF',
     items: [{ description: 'Cisco Catalyst 9300', qty: 4, unitPrice: 320000, total: 1280000 }],
-    total: 1280000, status: 'Sent' as const, createdAt: '2026-04-01', expectedDelivery: '2026-04-20', notes: ''
+    total: 1280000, status: 'Sent' as 'Draft' | 'Sent' | 'Received' | 'Cancelled', createdAt: '2026-04-01', expectedDelivery: '2026-04-20', notes: ''
   },
 ]
 

@@ -9,12 +9,28 @@ import { exportToExcel } from '@/lib/export'
 import { PlusIcon, MagnifyingGlassIcon, ArrowDownTrayIcon, BuildingOffice2Icon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
 
 export default function MasterPage() {
-  const { lang, customers } = useAppStore()
+  const { lang, customers, addCustomer } = useAppStore()
   const t = translations[lang]
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<'customers'|'sla'>('customers')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name:'',industry:'',phone:'',email:'',taxId:'',address:'' })
+
+  const handleSaveCustomer = () => {
+    if (!form.name.trim()) return
+    const newCustomer = {
+      id: Date.now(),
+      name: form.name.trim(),
+      industry: form.industry || 'Other',
+      phone: form.phone.trim(),
+      email: form.email.trim(),
+      taxId: form.taxId.trim(),
+      address: form.address.trim(),
+    }
+    addCustomer(newCustomer)
+    setForm({ name:'', industry:'', phone:'', email:'', taxId:'', address:'' })
+    setShowModal(false)
+  }
 
   const filtered = customers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -159,7 +175,7 @@ export default function MasterPage() {
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
           <Button variant="ghost" onClick={() => setShowModal(false)}>{t.common.cancel}</Button>
-          <Button disabled={!form.name}>{t.common.save}</Button>
+          <Button disabled={!form.name} onClick={handleSaveCustomer}>{t.common.save}</Button>
         </div>
       </Modal>
     </div>

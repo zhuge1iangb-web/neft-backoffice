@@ -77,6 +77,7 @@ interface AppState {
   addTicket: (ticket: typeof demoTickets[number]) => void
   updateTicket: (id: number, data: Partial<typeof demoTickets[number]>) => void
   deleteTicket: (id: number) => void
+  addWorkLog: (ticketId: number, log: import('@/lib/demo-data').WorkLog) => void
   // Contracts
   updateContract: (id: number, data: Partial<typeof demoContracts[number]>) => void
   deleteContract: (id: number) => void
@@ -398,6 +399,13 @@ export const useAppStore = create<AppState>()(
       },
       deleteTicket: (id) => {
         const tickets = get().tickets.filter(t => t.id !== id)
+        set({ tickets })
+        syncToSupabase('tickets', tickets)
+      },
+      addWorkLog: (ticketId, log) => {
+        const tickets = get().tickets.map(t =>
+          t.id === ticketId ? { ...t, workLogs: [...(t.workLogs || []), log] } : t
+        )
         set({ tickets })
         syncToSupabase('tickets', tickets)
       },

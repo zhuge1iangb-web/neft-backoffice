@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store'
 import { translations } from '@/lib/translations'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const { login, currentUser, lang, setLang } = useAppStore()
@@ -50,12 +51,12 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#0F2654] to-[#1B3875] px-8 py-8 text-center">
-            <div className="w-16 h-16 bg-[#E84B0F] rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-              <span className="text-white font-black text-2xl">N</span>
+          <div className="bg-gradient-to-br from-[#0F2654] via-[#1B3875] to-[#1a4a9e] px-8 py-8 text-center">
+            <div className="flex justify-center mb-3">
+              <Image src="/neft-logo.png" alt="NEFT Solution" width={160} height={54} className="h-12 w-auto object-contain drop-shadow-lg" priority />
             </div>
-            <h1 className="text-white font-bold text-xl">NEFT Solution</h1>
-            <p className="text-blue-200 text-sm mt-1">{t.login.subtitle}</p>
+            <div className="w-12 h-px bg-[#E84B0F] mx-auto mb-3 opacity-80" />
+            <p className="text-blue-200 text-sm">{t.login.subtitle}</p>
           </div>
 
           {/* Form */}
@@ -122,7 +123,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-center text-white/40 text-xs mt-4">© 2026 NEFT Solution Co., Ltd.</p>
+        <div className="text-center mt-4 space-y-1">
+          <p className="text-white/40 text-xs">© 2026 NEFT Solution Co., Ltd.</p>
+          <a href="/customer-portal" className="inline-block text-blue-300 hover:text-white text-xs underline underline-offset-2 transition-colors">
+            🏥 ลูกค้า / Customer Portal →
+          </a>
+        </div>
       </div>
     </div>
   )

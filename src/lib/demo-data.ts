@@ -58,12 +58,92 @@ export const demoInvoices = [
   { id: 6, projectId: 5, projectName: 'Wireless Infra - AIS Branch',  customerId: 6, customerName: 'AIS',                         invoiceNo: 'INV-2025-0082', invoiceDate: '2025-12-01', dueDate: '2025-12-31', billedAmount: 630000,  paidAmount: 0,       status: 'Overdue',   overdue: true  },
 ]
 
+export type WorkLog = { id: number; time: string; user: string; action: string; note: string }
 export const demoTickets = [
-  { id: 1, no: 'TK-2026-0089', customerId: 2, customerName: 'ธนาคารกรุงไทย',  subject: 'Firewall policy block internal traffic', severity: 'Critical', assignedTo: 'ธนกร ขยัน', status: 'In Progress', createdAt: '2026-04-02', responseDue: '2026-04-02 14:00', resolutionDue: '2026-04-02 18:00', slaStatus: 'At Risk', contractId: 1, description: 'พบปัญหา Firewall บล็อค traffic ระหว่าง VLAN ทำให้ระบบหลักไม่สามารถเชื่อมต่อได้' },
-  { id: 2, no: 'TK-2026-0088', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด', subject: 'Switch port not working - Building B Floor 3', severity: 'High',  assignedTo: 'ธนกร ขยัน', status: 'Assigned',     createdAt: '2026-04-01', responseDue: '2026-04-01 17:00', resolutionDue: '2026-04-02 17:00', slaStatus: 'Breached', contractId: 2, description: 'Port บน Switch Floor 3 ตาย 4 ports ส่งผลต่อการทำงาน' },
-  { id: 3, no: 'TK-2026-0085', customerId: 4, customerName: 'บริษัท ซีพีเอฟ จำกัด (มหาชน)', subject: 'Slow internet - Head office', severity: 'Medium', assignedTo: 'ธนกร ขยัน', status: 'Pending Customer', createdAt: '2026-03-30', responseDue: '2026-03-30 17:00', resolutionDue: '2026-04-01 17:00', slaStatus: 'Met', contractId: 3, description: 'Internet ช้าผิดปกติ ตรวจพบปัญหาจาก ISP รอ ISP แก้ไข' },
-  { id: 4, no: 'TK-2026-0080', customerId: 3, customerName: 'SCG Group',       subject: 'VPN disconnection intermittent',         severity: 'Low',    assignedTo: 'ธนกร ขยัน', status: 'Resolved',     createdAt: '2026-03-25', responseDue: '2026-03-25 17:00', resolutionDue: '2026-03-28 17:00', slaStatus: 'Met', contractId: null, description: 'VPN หลุดบ้างเป็นครั้งคราว แก้ไขแล้วด้วยการ update certificate' },
-  { id: 5, no: 'TK-2026-0091', customerId: 5, customerName: 'PTT Digital',     subject: 'Server CPU high utilization 95%',        severity: 'High',   assignedTo: 'ธนกร ขยัน', status: 'Open',         createdAt: '2026-04-02', responseDue: '2026-04-02 16:00', resolutionDue: '2026-04-03 16:00', slaStatus: 'At Risk', contractId: null, description: 'Server หลักมี CPU สูงมาก 95% ต่อเนื่อง ต้องการความช่วยเหลือด่วน' },
+  {
+    id: 1, no: 'TK-2026-0089', customerId: 2, customerName: 'ธนาคารกรุงไทย',
+    subject: 'Firewall policy block internal traffic', severity: 'Critical' as 'Critical'|'High'|'Medium'|'Low',
+    channel: 'Phone' as 'Phone'|'Web'|'Email',
+    contactName: 'นายสมศักดิ์ IT Manager', contactPhone: '02-222-2201', contactEmail: 'somsakit@ktb.co.th',
+    assignedTo: 'ธนกร ขยัน', status: 'In Progress' as 'Open'|'Assigned'|'In Progress'|'Pending Customer'|'Pending Vendor'|'Escalated'|'Resolved'|'Closed',
+    createdAt: '2026-04-02T10:25:00', responseDue: '2026-04-02 14:00', resolutionDue: '2026-04-02 18:00',
+    slaStatus: 'At Risk' as 'Met'|'At Risk'|'Breached', contractId: 1,
+    description: 'พบปัญหา Firewall บล็อค traffic ระหว่าง VLAN ทำให้ระบบหลักไม่สามารถเชื่อมต่อได้',
+    escalationLevel: 1 as 0|1|2|3, escalatedTo: 'ธนกร ขยัน (L1)', escalatedAt: '2026-04-02T10:30:00', escalationReason: '',
+    rootCause: '', resolution: '', resolvedAt: null as string|null, closedAt: null as string|null,
+    workLogs: [
+      { id: 1, time: '2026-04-02T10:25:00', user: 'ธนกร ขยัน', action: 'Ticket Opened', note: 'รับแจ้งปัญหาผ่านโทรศัพท์ ออก Case Number TK-2026-0089 แจ้งลูกค้าแล้ว' },
+      { id: 2, time: '2026-04-02T10:45:00', user: 'ธนกร ขยัน', action: 'Investigating', note: 'Remote เข้าตรวจสอบ Firewall Policy พบ rule ที่ไม่ถูกต้อง' },
+      { id: 3, time: '2026-04-02T12:00:00', user: 'ธนกร ขยัน', action: 'In Progress', note: 'กำลัง apply policy ใหม่ รอ approval จาก security team' },
+    ] as WorkLog[]
+  },
+  {
+    id: 2, no: 'TK-2026-0088', customerId: 1, customerName: 'บริษัท ไทยเมทัล จำกัด',
+    subject: 'Switch port not working - Building B Floor 3', severity: 'High' as 'Critical'|'High'|'Medium'|'Low',
+    channel: 'Email' as 'Phone'|'Web'|'Email',
+    contactName: 'นางสาวอรวรรณ Network Engineer', contactPhone: '02-111-1105', contactEmail: 'orawan@thaimetal.co.th',
+    assignedTo: 'ธนกร ขยัน', status: 'Escalated' as 'Open'|'Assigned'|'In Progress'|'Pending Customer'|'Pending Vendor'|'Escalated'|'Resolved'|'Closed',
+    createdAt: '2026-04-01T09:00:00', responseDue: '2026-04-01 17:00', resolutionDue: '2026-04-02 17:00',
+    slaStatus: 'Breached' as 'Met'|'At Risk'|'Breached', contractId: 2,
+    description: 'Port บน Switch Floor 3 ตาย 4 ports ส่งผลต่อการทำงาน ต้องการเปลี่ยน Switch',
+    escalationLevel: 3 as 0|1|2|3, escalatedTo: 'HPE / Aruba TAC Support', escalatedAt: '2026-04-01T16:00:00', escalationReason: 'ปัญหา Hardware ต้องติดต่อผู้ผลิตโดยตรง',
+    rootCause: 'Switch hardware failure - PoE chip ชำรุด', resolution: '', resolvedAt: null as string|null, closedAt: null as string|null,
+    workLogs: [
+      { id: 1, time: '2026-04-01T09:00:00', user: 'ระบบ', action: 'Ticket Opened', note: 'รับแจ้งปัญหาผ่าน Email ออก Case Number TK-2026-0088 แจ้งลูกค้าทาง Email แล้ว' },
+      { id: 2, time: '2026-04-01T10:30:00', user: 'ธนกร ขยัน', action: 'On-site Visit', note: 'ลงพื้นที่ตรวจสอบ พบ 4 ports ชำรุด Hardware' },
+      { id: 3, time: '2026-04-01T16:00:00', user: 'ธนกร ขยัน', action: 'Escalated to Manufacturer', note: 'ยกระดับไปยัง HPE/Aruba TAC Case#HPE-2026-88421 รอ RMA' },
+    ] as WorkLog[]
+  },
+  {
+    id: 3, no: 'TK-2026-0085', customerId: 4, customerName: 'บริษัท ซีพีเอฟ จำกัด (มหาชน)',
+    subject: 'Slow internet - Head office', severity: 'Medium' as 'Critical'|'High'|'Medium'|'Low',
+    channel: 'Web' as 'Phone'|'Web'|'Email',
+    contactName: 'นายวิทยา System Admin', contactPhone: '02-444-4410', contactEmail: 'wittaya@cpf.co.th',
+    assignedTo: 'ธนกร ขยัน', status: 'Pending Vendor' as 'Open'|'Assigned'|'In Progress'|'Pending Customer'|'Pending Vendor'|'Escalated'|'Resolved'|'Closed',
+    createdAt: '2026-03-30T14:00:00', responseDue: '2026-03-30 17:00', resolutionDue: '2026-04-01 17:00',
+    slaStatus: 'Met' as 'Met'|'At Risk'|'Breached', contractId: 3,
+    description: 'Internet ช้าผิดปกติ ตรวจพบปัญหาจาก ISP รอ ISP แก้ไข',
+    escalationLevel: 2 as 0|1|2|3, escalatedTo: 'True Business NOC', escalatedAt: '2026-03-30T17:00:00', escalationReason: 'ปัญหาที่ ISP ต้องประสาน 3rd Party',
+    rootCause: 'ISP backbone congestion', resolution: '', resolvedAt: null as string|null, closedAt: null as string|null,
+    workLogs: [
+      { id: 1, time: '2026-03-30T14:00:00', user: 'ระบบ', action: 'Ticket Opened', note: 'รับแจ้งผ่าน Web Portal ออก Case Number TK-2026-0085 แจ้ง SMS และ Email ลูกค้าแล้ว' },
+      { id: 2, time: '2026-03-30T15:00:00', user: 'ธนกร ขยัน', action: 'Diagnosed', note: 'Traceroute พบ latency สูงที่ ISP Backbone ประสาน True Business NOC' },
+      { id: 3, time: '2026-03-30T17:00:00', user: 'ธนกร ขยัน', action: 'Escalated to Vendor', note: 'ส่ง Case ไปยัง True Business NOC Ticket#TRUE-44521 รอการแก้ไข' },
+    ] as WorkLog[]
+  },
+  {
+    id: 4, no: 'TK-2026-0080', customerId: 3, customerName: 'SCG Group',
+    subject: 'VPN disconnection intermittent', severity: 'Low' as 'Critical'|'High'|'Medium'|'Low',
+    channel: 'Email' as 'Phone'|'Web'|'Email',
+    contactName: 'นายปรีชา IT Security', contactPhone: '02-333-3312', contactEmail: 'preecha@scg.co.th',
+    assignedTo: 'ธนกร ขยัน', status: 'Resolved' as 'Open'|'Assigned'|'In Progress'|'Pending Customer'|'Pending Vendor'|'Escalated'|'Resolved'|'Closed',
+    createdAt: '2026-03-25T11:00:00', responseDue: '2026-03-25 17:00', resolutionDue: '2026-03-28 17:00',
+    slaStatus: 'Met' as 'Met'|'At Risk'|'Breached', contractId: null,
+    description: 'VPN หลุดบ้างเป็นครั้งคราว',
+    escalationLevel: 0 as 0|1|2|3, escalatedTo: '', escalatedAt: '', escalationReason: '',
+    rootCause: 'VPN certificate expired', resolution: 'Renewed certificate และ update VPN client บนอุปกรณ์ผู้ใช้งานทั้งหมด',
+    resolvedAt: '2026-03-27T14:30:00' as string|null, closedAt: null as string|null,
+    workLogs: [
+      { id: 1, time: '2026-03-25T11:00:00', user: 'ระบบ', action: 'Ticket Opened', note: 'รับแจ้งผ่าน Email ออก Case Number TK-2026-0080' },
+      { id: 2, time: '2026-03-25T14:00:00', user: 'ธนกร ขยัน', action: 'Investigating', note: 'ตรวจสอบ Log พบ certificate ใกล้หมดอายุ' },
+      { id: 3, time: '2026-03-27T14:30:00', user: 'ธนกร ขยัน', action: 'Resolved', note: 'Renew certificate สำเร็จ VPN ทำงานปกติ แจ้งลูกค้าแล้ว' },
+    ] as WorkLog[]
+  },
+  {
+    id: 5, no: 'TK-2026-0091', customerId: 5, customerName: 'PTT Digital',
+    subject: 'Server CPU high utilization 95%', severity: 'High' as 'Critical'|'High'|'Medium'|'Low',
+    channel: 'Phone' as 'Phone'|'Web'|'Email',
+    contactName: 'นายกิตติ Server Admin', contactPhone: '02-555-5509', contactEmail: 'kitti@pttdigital.co.th',
+    assignedTo: 'ธนกร ขยัน', status: 'Open' as 'Open'|'Assigned'|'In Progress'|'Pending Customer'|'Pending Vendor'|'Escalated'|'Resolved'|'Closed',
+    createdAt: '2026-04-02T15:00:00', responseDue: '2026-04-02 16:00', resolutionDue: '2026-04-03 16:00',
+    slaStatus: 'At Risk' as 'Met'|'At Risk'|'Breached', contractId: null,
+    description: 'Server หลักมี CPU สูงมาก 95% ต่อเนื่อง ต้องการความช่วยเหลือด่วน',
+    escalationLevel: 0 as 0|1|2|3, escalatedTo: '', escalatedAt: '', escalationReason: '',
+    rootCause: '', resolution: '', resolvedAt: null as string|null, closedAt: null as string|null,
+    workLogs: [
+      { id: 1, time: '2026-04-02T15:00:00', user: 'ระบบ', action: 'Ticket Opened', note: 'รับแจ้งผ่านโทรศัพท์ ออก Case Number TK-2026-0091 แจ้งลูกค้าแล้ว' },
+    ] as WorkLog[]
+  },
 ]
 
 export const demoContracts = [

@@ -11,6 +11,7 @@ import {
   ShoppingCartIcon, ArchiveBoxIcon
 } from '@heroicons/react/24/outline'
 import { useState } from 'react'
+import Image from 'next/image'
 
 const navItems = (t: typeof translations.th) => [
   { href: '/dashboard',      label: t.nav.dashboard,      icon: HomeIcon },
@@ -41,20 +42,16 @@ export default function Sidebar() {
       collapsed ? 'w-16' : 'w-60'
     )}>
       {/* Logo */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
+      <div className="flex items-center justify-between px-3 py-3 border-b border-white/10">
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#E84B0F] rounded-lg flex items-center justify-center font-bold text-sm">N</div>
-            <div>
-              <div className="font-bold text-sm leading-tight">NEFT</div>
-              <div className="text-xs text-blue-200">Backoffice</div>
-            </div>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Image src="/neft-logo.png" alt="NEFT Solution" width={120} height={40} className="h-8 w-auto object-contain" priority />
           </div>
         )}
         {collapsed && (
-          <div className="w-8 h-8 bg-[#E84B0F] rounded-lg flex items-center justify-center font-bold text-sm mx-auto">N</div>
+          <div className="w-8 h-8 bg-gradient-to-br from-[#E84B0F] to-[#c93d08] rounded-lg flex items-center justify-center font-black text-sm mx-auto shadow-md">N</div>
         )}
-        <button onClick={() => setCollapsed(!collapsed)} className="text-blue-300 hover:text-white p-1 rounded">
+        <button onClick={() => setCollapsed(!collapsed)} className="text-blue-300 hover:text-white p-1 rounded flex-shrink-0">
           {collapsed ? <ChevronDoubleRightIcon className="w-4 h-4" /> : <ChevronDoubleLeftIcon className="w-4 h-4" />}
         </button>
       </div>
@@ -87,7 +84,17 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom */}
-      <div className="border-t border-white/10 p-3">
+      <div className="border-t border-white/10 p-3 space-y-1">
+        {/* Customer Portal link */}
+        <Link href="/customer-portal" target="_blank"
+          className={clsx(
+            'flex items-center gap-3 w-full px-2 py-2 text-sm text-blue-300 hover:text-white hover:bg-white/10 rounded-lg transition-all',
+            collapsed && 'justify-center'
+          )}
+        >
+          <BuildingOffice2Icon className="w-5 h-5 flex-shrink-0" />
+          {!collapsed && <span className="text-xs">Customer Portal</span>}
+        </Link>
         <button
           onClick={handleLogout}
           className={clsx(

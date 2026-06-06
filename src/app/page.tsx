@@ -30,15 +30,6 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  const demoLogins = [
-    { u: 'admin',   p: 'admin123', label: 'Admin' },
-    { u: 'ceo',     p: 'ceo123',   label: 'CEO' },
-    { u: 'sales1',  p: 'sales123', label: 'Sales' },
-    { u: 'pm1',     p: 'pm123',    label: 'PM' },
-    { u: 'finance', p: 'fin123',   label: 'Finance' },
-    { u: 'service', p: 'svc123',   label: 'Service' },
-  ]
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F2654] via-[#1B3875] to-[#2557A7] flex items-center justify-center p-4">
       {/* Background pattern */}
@@ -94,21 +85,6 @@ export default function LoginPage() {
                 {t.login.loginBtn}
               </button>
             </form>
-
-            {/* Demo accounts */}
-            <div className="mt-5">
-              <p className="text-xs text-center text-gray-400 mb-2">Demo Accounts</p>
-              <div className="grid grid-cols-3 gap-1">
-                {demoLogins.map(d => (
-                  <button key={d.u}
-                    onClick={() => { setUsername(d.u); setPassword(d.p) }}
-                    className="text-xs px-2 py-1.5 bg-gray-50 hover:bg-blue-50 hover:text-[#1B3875] border border-gray-100 rounded-lg transition-colors text-gray-600"
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Language */}
             <div className="mt-4 flex justify-center gap-3">

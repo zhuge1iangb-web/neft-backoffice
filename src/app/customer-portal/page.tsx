@@ -22,17 +22,6 @@ const STATUS_TH: Record<string, string> = {
   'Escalated': 'ยกระดับปัญหา', 'Resolved': 'แก้ไขแล้ว', 'Closed': 'ปิด Case'
 }
 
-// Master credential store — in production this comes from Supabase auth
-// Admin manages this via Users page → Customer Portal tab
-const CUSTOMER_CREDENTIALS: Array<{ email: string; password: string; customerId: number; contactName: string; companyName: string }> = [
-  { email: 'it@ktb.co.th',          password: 'ktb123',   customerId: 2, contactName: 'IT Manager',   companyName: 'ธนาคารกรุงไทย' },
-  { email: 'info@thaimetal.co.th',   password: 'metal123', customerId: 1, contactName: 'Network Eng',  companyName: 'บริษัท ไทยเมทัล จำกัด' },
-  { email: 'procurement@scg.co.th',  password: 'scg123',   customerId: 3, contactName: 'IT Admin',     companyName: 'SCG Group' },
-  { email: 'it@cpf.co.th',           password: 'cpf123',   customerId: 4, contactName: 'System Admin', companyName: 'บริษัท ซีพีเอฟ จำกัด' },
-  { email: 'info@pttdigital.co.th',  password: 'ptt123',   customerId: 5, contactName: 'IT Staff',     companyName: 'PTT Digital' },
-  { email: 'vendor@ais.th',          password: 'ais123',   customerId: 6, contactName: 'IT Vendor',    companyName: 'AIS' },
-]
-
 type CustomerSession = {
   email: string
   customerId: number
@@ -41,7 +30,7 @@ type CustomerSession = {
 }
 
 export default function CustomerPortalPage() {
-  const { tickets, addTicket } = useAppStore()
+  const { tickets, addTicket, customerPortalAccounts } = useAppStore()
   const [session, setSession] = useState<CustomerSession | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -72,7 +61,9 @@ export default function CustomerPortalPage() {
     setLoginLoading(true)
     setLoginErr('')
     await new Promise(r => setTimeout(r, 500))
-    const cred = CUSTOMER_CREDENTIALS.find(c => c.email === email.trim().toLowerCase() && c.password === password)
+    const cred = customerPortalAccounts.find(c =>
+      c.email === email.trim().toLowerCase() && c.password === password && c.active
+    )
     if (!cred) {
       setLoginErr('อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาติดต่อ NEFT เพื่อขอรับ credentials')
       setLoginLoading(false)
@@ -81,8 +72,8 @@ export default function CustomerPortalPage() {
     const sess: CustomerSession = {
       email: cred.email,
       customerId: cred.customerId,
-      companyName: cred.companyName,
-      contactName: cred.contactName,
+      companyName: cred.company,
+      contactName: cred.name,
     }
     setSession(sess)
     sessionStorage.setItem('neft_customer_session', JSON.stringify(sess))

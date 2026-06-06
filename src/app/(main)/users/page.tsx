@@ -33,15 +33,6 @@ type CustomerAccount = {
   customerId: number; active: boolean; createdAt: string; lastLogin: string | null
 }
 
-const INITIAL_CUSTOMERS: CustomerAccount[] = [
-  { id: 101, name: 'IT Manager',   company: 'ธนาคารกรุงไทย',          email: 'it@ktb.co.th',          password: 'ktb123',   customerId: 2, active: true, createdAt: '2026-01-15', lastLogin: '2026-06-04' },
-  { id: 102, name: 'Network Eng',  company: 'บริษัท ไทยเมทัล จำกัด', email: 'info@thaimetal.co.th',  password: 'metal123', customerId: 1, active: true, createdAt: '2026-01-20', lastLogin: '2026-06-03' },
-  { id: 103, name: 'IT Admin',     company: 'SCG Group',               email: 'procurement@scg.co.th', password: 'scg123',   customerId: 3, active: true, createdAt: '2026-02-01', lastLogin: '2026-05-28' },
-  { id: 104, name: 'System Admin', company: 'บริษัท ซีพีเอฟ จำกัด',   email: 'it@cpf.co.th',          password: 'cpf123',   customerId: 4, active: true, createdAt: '2026-02-10', lastLogin: '2026-06-01' },
-  { id: 105, name: 'IT Staff',     company: 'PTT Digital',             email: 'info@pttdigital.co.th', password: 'ptt123',   customerId: 5, active: true, createdAt: '2026-03-01', lastLogin: null },
-  { id: 106, name: 'IT Vendor',    company: 'AIS',                     email: 'vendor@ais.th',          password: 'ais123',   customerId: 6, active: true, createdAt: '2026-03-15', lastLogin: null },
-]
-
 function generatePassword(length = 10) {
   const chars = 'abcdefghijkmnpqrstuvwxyz23456789'
   return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
@@ -57,7 +48,7 @@ const defaultStaffForm: StaffFormData = {
 }
 
 export default function UsersPage() {
-  const { lang, users, customers, currentUser } = useAppStore()
+  const { lang, users, customers, currentUser, customerPortalAccounts, addCustomerPortalAccount, updateCustomerPortalAccount, deleteCustomerPortalAccount } = useAppStore()
   const t = translations[lang]
   const isAdmin = currentUser?.role === 'Admin'
 
@@ -75,8 +66,8 @@ export default function UsersPage() {
   const [newResetPw, setNewResetPw] = useState('')
   const [staffSuccess, setStaffSuccess] = useState<string | null>(null)
 
-  // Customer portal state
-  const [customerAccounts, setCustomerAccounts] = useState<CustomerAccount[]>(INITIAL_CUSTOMERS)
+  // Customer portal state — backed by store for cross-page persistence
+  const customerAccounts = customerPortalAccounts
   const [showCustModal, setShowCustModal] = useState(false)
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [showPassId, setShowPassId] = useState<number | null>(null)
@@ -158,17 +149,18 @@ export default function UsersPage() {
       email: custForm.email, password: pw, customerId: +custForm.customerId,
       active: true, createdAt: new Date().toISOString().split('T')[0], lastLogin: null,
     }
-    setCustomerAccounts(prev => [...prev, newAcc])
+    addCustomerPortalAccount(newAcc)
     setNewCustCreated(newAcc)
     setShowCustModal(false)
     setCustForm({ name: '', email: '', customerId: '', password: '' })
   }
 
   const toggleActive = (id: number) => {
-    setCustomerAccounts(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c))
+    const acc = customerPortalAccounts.find(c => c.id === id)
+    if (acc) updateCustomerPortalAccount(id, { active: !acc.active })
   }
   const deleteCustomerAcc = (id: number) => {
-    setCustomerAccounts(prev => prev.filter(c => c.id !== id))
+    deleteCustomerPortalAccount(id)
   }
 
   return (

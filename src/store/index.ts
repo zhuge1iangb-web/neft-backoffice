@@ -13,17 +13,31 @@ import type { Lang } from '@/lib/translations'
 type User = typeof demoUsers[number]
 
 export type CustomerPortalAccount = {
-  id: number; name: string; company: string; email: string; password: string
-  customerId: number; active: boolean; createdAt: string; lastLogin: string | null
+  id: number
+  name: string
+  company: string
+  email: string
+  password: string
+  customerId: number
+  active: boolean
+  createdAt: string
+  lastLogin: string | null
+  // Contact & notification fields (multi-value)
+  phones: string[]        // เบอร์โทรศัพท์ได้หลายเบอร์
+  emails: string[]        // email ติดต่อ (อาจต่างจาก login email)
+  lineIds: string[]       // LINE ID ได้หลายรายการ
+  lineNotifyTokens: string[]  // LINE Notify token สำหรับส่งแจ้งเตือน
+  notifyViaEmail: boolean // เปิด/ปิด แจ้งเตือนทาง email
+  notifyViaLine: boolean  // เปิด/ปิด แจ้งเตือนทาง LINE
 }
 
 const INITIAL_CUSTOMER_PORTAL_ACCOUNTS: CustomerPortalAccount[] = [
-  { id: 101, name: 'IT Manager',   company: 'ธนาคารกรุงไทย',           email: 'it@ktb.co.th',          password: 'ktb123',   customerId: 2, active: true, createdAt: '2026-01-15', lastLogin: '2026-06-04' },
-  { id: 102, name: 'Network Eng',  company: 'บริษัท ไทยเมทัล จำกัด',  email: 'info@thaimetal.co.th',  password: 'metal123', customerId: 1, active: true, createdAt: '2026-01-20', lastLogin: '2026-06-03' },
-  { id: 103, name: 'IT Admin',     company: 'SCG Group',                email: 'procurement@scg.co.th', password: 'scg123',   customerId: 3, active: true, createdAt: '2026-02-01', lastLogin: '2026-05-28' },
-  { id: 104, name: 'System Admin', company: 'บริษัท ซีพีเอฟ จำกัด',    email: 'it@cpf.co.th',          password: 'cpf123',   customerId: 4, active: true, createdAt: '2026-02-10', lastLogin: '2026-06-01' },
-  { id: 105, name: 'IT Staff',     company: 'PTT Digital',              email: 'info@pttdigital.co.th', password: 'ptt123',   customerId: 5, active: true, createdAt: '2026-03-01', lastLogin: null },
-  { id: 106, name: 'IT Vendor',    company: 'AIS',                      email: 'vendor@ais.th',         password: 'ais123',   customerId: 6, active: true, createdAt: '2026-03-15', lastLogin: null },
+  { id: 101, name: 'IT Manager',   company: 'ธนาคารกรุงไทย',           email: 'it@ktb.co.th',          password: 'ktb123',   customerId: 2, active: true, createdAt: '2026-01-15', lastLogin: '2026-06-04', phones: [], emails: [], lineIds: [], lineNotifyTokens: [], notifyViaEmail: false, notifyViaLine: false },
+  { id: 102, name: 'Network Eng',  company: 'บริษัท ไทยเมทัล จำกัด',  email: 'info@thaimetal.co.th',  password: 'metal123', customerId: 1, active: true, createdAt: '2026-01-20', lastLogin: '2026-06-03', phones: [], emails: [], lineIds: [], lineNotifyTokens: [], notifyViaEmail: false, notifyViaLine: false },
+  { id: 103, name: 'IT Admin',     company: 'SCG Group',                email: 'procurement@scg.co.th', password: 'scg123',   customerId: 3, active: true, createdAt: '2026-02-01', lastLogin: '2026-05-28', phones: [], emails: [], lineIds: [], lineNotifyTokens: [], notifyViaEmail: false, notifyViaLine: false },
+  { id: 104, name: 'System Admin', company: 'บริษัท ซีพีเอฟ จำกัด',    email: 'it@cpf.co.th',          password: 'cpf123',   customerId: 4, active: true, createdAt: '2026-02-10', lastLogin: '2026-06-01', phones: [], emails: [], lineIds: [], lineNotifyTokens: [], notifyViaEmail: false, notifyViaLine: false },
+  { id: 105, name: 'IT Staff',     company: 'PTT Digital',              email: 'info@pttdigital.co.th', password: 'ptt123',   customerId: 5, active: true, createdAt: '2026-03-01', lastLogin: null,         phones: [], emails: [], lineIds: [], lineNotifyTokens: [], notifyViaEmail: false, notifyViaLine: false },
+  { id: 106, name: 'IT Vendor',    company: 'AIS',                      email: 'vendor@ais.th',         password: 'ais123',   customerId: 6, active: true, createdAt: '2026-03-15', lastLogin: null,         phones: [], emails: [], lineIds: [], lineNotifyTokens: [], notifyViaEmail: false, notifyViaLine: false },
 ]
 
 interface AppState {

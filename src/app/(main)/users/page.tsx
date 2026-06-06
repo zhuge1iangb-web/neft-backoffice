@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useAppStore } from '@/store'
+import type { CustomerPortalAccount } from '@/store'
 import { translations } from '@/lib/translations'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
@@ -8,8 +9,10 @@ import Modal from '@/components/ui/Modal'
 import { exportToExcel } from '@/lib/export'
 import {
   PlusIcon, MagnifyingGlassIcon, ArrowDownTrayIcon,
-  UserCircleIcon, BuildingOffice2Icon, ClipboardDocumentIcon, EyeIcon, EyeSlashIcon,
-  TrashIcon, CheckCircleIcon, PencilIcon, KeyIcon, XMarkIcon
+  UserCircleIcon, BuildingOffice2Icon, ClipboardDocumentIcon,
+  EyeIcon, EyeSlashIcon, TrashIcon, CheckCircleIcon, PencilIcon,
+  KeyIcon, XMarkIcon, PhoneIcon, EnvelopeIcon, ChatBubbleLeftEllipsisIcon,
+  BellIcon, BellSlashIcon,
 } from '@heroicons/react/24/outline'
 
 const STAFF_ROLES = ['Admin','CEO/Director','Sales Manager','Sales','Project Manager','Engineer','Finance','Service Support']
@@ -28,11 +31,6 @@ const PERMISSION_MATRIX = [
   { fn: 'Manage Users/Master Data', ceo: false, sales: false, sm: false, pm: false, eng: false, fin: false, svc: false, admin: true,  cust: false },
 ]
 
-type CustomerAccount = {
-  id: number; name: string; company: string; email: string; password: string
-  customerId: number; active: boolean; createdAt: string; lastLogin: string | null
-}
-
 function generatePassword(length = 10) {
   const chars = 'abcdefghijkmnpqrstuvwxyz23456789'
   return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
@@ -47,18 +45,78 @@ const defaultStaffForm: StaffFormData = {
   name: '', username: '', email: '', password: '', role: 'Service Support', department: 'Service', active: true
 }
 
+// ── Multi-value input component ──────────────────────────────────────────────
+function MultiValueInput({
+  label, icon, values, onChange, placeholder, type = 'text',
+}: {
+  label: string
+  icon: React.ReactNode
+  values: string[]
+  onChange: (vals: string[]) => void
+  placeholder: string
+  type?: string
+}) {
+  const [draft, setDraft] = useState('')
+  const add = () => {
+    const v = draft.trim()
+    if (v && !values.includes(v)) { onChange([...values, v]); setDraft('') }
+  }
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
+        {icon}{label}
+      </label>
+      <div className="flex gap-1.5 mb-1.5 flex-wrap">
+        {values.map((v, i) => (
+          <span key={i} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full border border-blue-200">
+            {v}
+            <button type="button" onClick={() => onChange(values.filter((_, j) => j !== i))}
+              className="hover:text-red-500 transition-colors">
+              <XMarkIcon className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-1.5">
+        <input
+          type={type} value={draft} onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder={placeholder}
+          className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#1B3875]/20"
+        />
+        <button type="button" onClick={add} disabled={!draft.trim()}
+          className="px-2.5 py-1.5 text-xs text-white bg-[#1B3875] rounded-lg hover:bg-[#0F2654] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          + เพิ่ม
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Customer Edit Form state type ─────────────────────────────────────────────
+type CustContactForm = {
+  name: string
+  phones: string[]
+  emails: string[]
+  lineIds: string[]
+  lineNotifyTokens: string[]
+  notifyViaEmail: boolean
+  notifyViaLine: boolean
+}
+
 export default function UsersPage() {
-  const { lang, users, customers, currentUser, customerPortalAccounts, addCustomerPortalAccount, updateCustomerPortalAccount, deleteCustomerPortalAccount } = useAppStore()
+  const { lang, users, customers, currentUser, customerPortalAccounts,
+    addCustomerPortalAccount, updateCustomerPortalAccount, deleteCustomerPortalAccount,
+    addUser, updateUser, deleteUser } = useAppStore()
   const t = translations[lang]
   const isAdmin = currentUser?.role === 'Admin'
 
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<'staff' | 'customers' | 'roles'>('staff')
 
-  // Staff management state
-  const [staffList, setStaffList] = useState(users)
+  // ── Staff state ──────────────────────────────────────────────────────────
   const [showStaffModal, setShowStaffModal] = useState(false)
-  const [editingStaff, setEditingStaff] = useState<(typeof users[number]) | null>(null)
+  const [editingStaff, setEditingStaff] = useState<typeof users[number] | null>(null)
   const [staffForm, setStaffForm] = useState<StaffFormData>(defaultStaffForm)
   const [showStaffPw, setShowStaffPw] = useState(false)
   const [deleteStaffConfirm, setDeleteStaffConfirm] = useState<number | null>(null)
@@ -66,15 +124,21 @@ export default function UsersPage() {
   const [newResetPw, setNewResetPw] = useState('')
   const [staffSuccess, setStaffSuccess] = useState<string | null>(null)
 
-  // Customer portal state — backed by store for cross-page persistence
+  // ── Customer portal state ────────────────────────────────────────────────
   const customerAccounts = customerPortalAccounts
   const [showCustModal, setShowCustModal] = useState(false)
+  const [editingCust, setEditingCust] = useState<CustomerPortalAccount | null>(null)
+  const [showCustEditModal, setShowCustEditModal] = useState(false)
+  const [custContactForm, setCustContactForm] = useState<CustContactForm>({
+    name: '', phones: [], emails: [], lineIds: [], lineNotifyTokens: [], notifyViaEmail: false, notifyViaLine: false,
+  })
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [showPassId, setShowPassId] = useState<number | null>(null)
-  const [newCustCreated, setNewCustCreated] = useState<CustomerAccount | null>(null)
+  const [newCustCreated, setNewCustCreated] = useState<CustomerPortalAccount | null>(null)
   const [custForm, setCustForm] = useState({ name: '', email: '', customerId: '', password: '' })
+  const [deleteCustConfirm, setDeleteCustConfirm] = useState<number | null>(null)
 
-  const filteredStaff = staffList.filter(u =>
+  const filteredStaff = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.username.toLowerCase().includes(search.toLowerCase()) ||
     u.role.toLowerCase().includes(search.toLowerCase())
@@ -94,7 +158,7 @@ export default function UsersPage() {
     setStaffSuccess(msg); setTimeout(() => setStaffSuccess(null), 3500)
   }
 
-  // ── STAFF CRUD ──
+  // ── STAFF CRUD ──────────────────────────────────────────────────────────
   const openAddStaff = () => {
     setEditingStaff(null)
     setStaffForm({ ...defaultStaffForm, password: generatePassword() })
@@ -111,56 +175,90 @@ export default function UsersPage() {
 
   const handleSaveStaff = () => {
     if (editingStaff) {
-      setStaffList(prev => prev.map(u => u.id === editingStaff.id ? { ...u, ...staffForm } : u))
+      updateUser(editingStaff.id, staffForm as any)
       flashSuccess(`อัพเดทข้อมูล "${staffForm.name}" เรียบร้อย`)
     } else {
-      const newUser = {
-        id: Date.now(), ...staffForm,
-        lastLogin: null as any,
-      }
-      setStaffList(prev => [...prev, newUser as any])
+      const newUser = { id: Date.now(), ...staffForm, lastLogin: null as any }
+      addUser(newUser as any)
       flashSuccess(`สร้าง account "${staffForm.name}" สำเร็จ`)
     }
     setShowStaffModal(false)
   }
 
   const handleDeleteStaff = (id: number) => {
-    setStaffList(prev => prev.filter(u => u.id !== id))
+    deleteUser(id)
     setDeleteStaffConfirm(null)
     flashSuccess('ลบ account เรียบร้อย')
   }
 
   const handleResetPassword = (id: number) => {
-    setStaffList(prev => prev.map(u => u.id === id ? { ...u, password: newResetPw } : u))
+    updateUser(id, { password: newResetPw } as any)
     flashSuccess('รีเซ็ตรหัสผ่านเรียบร้อย — แจ้ง password ใหม่ให้พนักงานด้วย')
     setShowResetPw(null); setNewResetPw('')
   }
 
   const toggleStaffActive = (id: number) => {
-    setStaffList(prev => prev.map(u => u.id === id ? { ...u, active: !u.active } : u))
+    const u = users.find(x => x.id === id)
+    if (u) updateUser(id, { active: !u.active } as any)
   }
 
-  // ── CUSTOMER PORTAL CRUD ──
+  // ── CUSTOMER PORTAL CRUD ─────────────────────────────────────────────────
   const handleCreateCustomer = () => {
     const cust = customers.find(c => c.id === +custForm.customerId)
     const pw = custForm.password || generatePassword()
-    const newAcc: CustomerAccount = {
+    const newAcc: CustomerPortalAccount = {
       id: Date.now(), name: custForm.name, company: cust?.name || '',
       email: custForm.email, password: pw, customerId: +custForm.customerId,
       active: true, createdAt: new Date().toISOString().split('T')[0], lastLogin: null,
+      phones: [], emails: [], lineIds: [], lineNotifyTokens: [],
+      notifyViaEmail: false, notifyViaLine: false,
     }
     addCustomerPortalAccount(newAcc)
     setNewCustCreated(newAcc)
     setShowCustModal(false)
     setCustForm({ name: '', email: '', customerId: '', password: '' })
+    flashSuccess(`สร้าง Customer Account สำเร็จ`)
+  }
+
+  const openEditCust = (c: CustomerPortalAccount) => {
+    setEditingCust(c)
+    setCustContactForm({
+      name: c.name,
+      phones: c.phones ?? [],
+      emails: c.emails ?? [],
+      lineIds: c.lineIds ?? [],
+      lineNotifyTokens: c.lineNotifyTokens ?? [],
+      notifyViaEmail: c.notifyViaEmail ?? false,
+      notifyViaLine: c.notifyViaLine ?? false,
+    })
+    setShowCustEditModal(true)
+  }
+
+  const handleSaveCustContact = () => {
+    if (!editingCust) return
+    updateCustomerPortalAccount(editingCust.id, {
+      name: custContactForm.name,
+      phones: custContactForm.phones,
+      emails: custContactForm.emails,
+      lineIds: custContactForm.lineIds,
+      lineNotifyTokens: custContactForm.lineNotifyTokens,
+      notifyViaEmail: custContactForm.notifyViaEmail,
+      notifyViaLine: custContactForm.notifyViaLine,
+    })
+    setShowCustEditModal(false)
+    setEditingCust(null)
+    flashSuccess(`อัพเดทข้อมูลติดต่อ "${editingCust.company}" เรียบร้อย`)
   }
 
   const toggleActive = (id: number) => {
     const acc = customerPortalAccounts.find(c => c.id === id)
     if (acc) updateCustomerPortalAccount(id, { active: !acc.active })
   }
+
   const deleteCustomerAcc = (id: number) => {
     deleteCustomerPortalAccount(id)
+    setDeleteCustConfirm(null)
+    flashSuccess('ลบ Customer Account เรียบร้อย')
   }
 
   return (
@@ -200,10 +298,10 @@ export default function UsersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Staff ทั้งหมด', value: staffList.length, color: 'text-[#1B3875]' },
-          { label: 'Staff Active', value: staffList.filter(u => u.active).length, color: 'text-green-600' },
+          { label: 'Staff ทั้งหมด', value: users.length, color: 'text-[#1B3875]' },
+          { label: 'Staff Active', value: users.filter(u => u.active).length, color: 'text-green-600' },
           { label: 'Customer Accounts', value: customerAccounts.length, color: 'text-orange-600' },
-          { label: 'แผนก', value: Array.from(new Set(staffList.map(u => u.department))).length, color: 'text-purple-600' },
+          { label: 'แจ้งเตือนเปิด', value: customerAccounts.filter(c => c.notifyViaEmail || c.notifyViaLine).length, color: 'text-purple-600' },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <div className="text-xs text-gray-500 mb-1">{k.label}</div>
@@ -215,7 +313,7 @@ export default function UsersPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
         {([
-          { key: 'staff', label: `Staff (${staffList.length})` },
+          { key: 'staff', label: `Staff (${users.length})` },
           { key: 'customers', label: `Customer Portal (${customerAccounts.length})` },
           { key: 'roles', label: 'Permission Matrix' },
         ] as const).map(tab => (
@@ -292,8 +390,6 @@ export default function UsersPage() {
                     )}
                   </div>
                 )}
-
-                {/* Reset password inline panel */}
                 {showResetPw === u.id && (
                   <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
                     <div className="text-xs font-semibold text-orange-700">รีเซ็ต Password สำหรับ {u.name}</div>
@@ -323,9 +419,11 @@ export default function UsersPage() {
           <div className="bg-[#0F2654]/5 border border-[#1B3875]/20 rounded-xl px-4 py-3 flex items-start gap-3">
             <BuildingOffice2Icon className="w-5 h-5 text-[#1B3875] flex-shrink-0 mt-0.5" />
             <div className="text-xs text-[#1B3875]/80">
-              <span className="font-semibold text-[#1B3875]">Customer Portal Account</span> — ลูกค้าใช้ login ที่{' '}
+              <span className="font-semibold text-[#1B3875]">Customer Portal Account</span>{' '}
+              — ลูกค้าใช้ login ที่{' '}
               <span className="font-mono bg-white px-1 py-0.5 rounded text-xs">neft-backofficev2.vercel.app/customer-portal</span>{' '}
-              เพื่อเปิด Case, ติดตามสถานะ, ดู Work Log ของตัวเอง
+              เพื่อเปิด Case, ติดตามสถานะ, ดู Work Log ของตัวเอง{' '}
+              {isAdmin && <span className="font-semibold text-[#E84B0F]">• Admin สามารถแก้ไขข้อมูลติดต่อและการแจ้งเตือนของทุก account ได้</span>}
             </div>
           </div>
 
@@ -340,70 +438,129 @@ export default function UsersPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-[#F4F6FA] border-b border-gray-100">
-                <tr>
-                  {['บริษัท / ลูกค้า','ชื่อผู้ใช้','Email (Login)','Password','สถานะ','สร้างเมื่อ','Login ล่าสุด',''].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCustomers.map(c => (
-                  <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-xs flex-shrink-0">
-                          {c.company.charAt(0)}
-                        </div>
-                        <span className="text-xs font-medium text-gray-700 truncate max-w-[120px]">{c.company}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{c.name}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-mono text-gray-700">{c.email}</span>
-                        <button onClick={() => copyText(c.email, c.id * 10)} className="text-gray-400 hover:text-[#1B3875]">
-                          <ClipboardDocumentIcon className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-mono text-gray-500">{showPassId === c.id ? c.password : '••••••••'}</span>
-                        <button onClick={() => setShowPassId(showPassId === c.id ? null : c.id)} className="text-gray-400 hover:text-gray-600">
-                          {showPassId === c.id ? <EyeSlashIcon className="w-3.5 h-3.5" /> : <EyeIcon className="w-3.5 h-3.5" />}
-                        </button>
-                        <button onClick={() => copyText(c.password, c.id * 100)} className="text-gray-400 hover:text-[#1B3875]">
-                          <ClipboardDocumentIcon className="w-3 h-3" />
-                        </button>
-                        {copiedId === c.id * 100 && <span className="text-xs text-green-600">✓</span>}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
+          {/* Customer cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredCustomers.map(c => {
+              const hasNotify = c.notifyViaEmail || c.notifyViaLine
+              return (
+                <div key={c.id} className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden">
+                  {/* Header */}
+                  <div className="p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm flex-shrink-0">
+                      {c.company.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-800 truncate">{c.company}</div>
+                      <div className="text-xs text-gray-400">{c.name}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {hasNotify && (
+                        <span title="แจ้งเตือนเปิดใช้งาน" className="text-green-500">
+                          <BellIcon className="w-4 h-4" />
+                        </span>
+                      )}
                       <button onClick={() => toggleActive(c.id)}>
                         <Badge variant={c.active ? 'success' : 'default'}>{c.active ? 'Active' : 'Inactive'}</Badge>
                       </button>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{c.createdAt}</td>
-                    <td className="px-4 py-3 text-xs text-gray-400">{c.lastLogin || '—'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => copyText(`Portal: https://neft-backofficev2.vercel.app/customer-portal\nEmail: ${c.email}\nPassword: ${c.password}`, c.id)}
-                          className="text-xs flex items-center gap-1 text-[#1B3875] hover:text-[#0F2654] px-2 py-1 rounded hover:bg-blue-50">
-                          <ClipboardDocumentIcon className="w-3.5 h-3.5" />
-                          {copiedId === c.id ? 'คัดลอกแล้ว!' : 'Copy'}
-                        </button>
-                        <button onClick={() => deleteCustomerAcc(c.id)} className="text-gray-300 hover:text-red-500 p-1 rounded">
+                    </div>
+                  </div>
+
+                  {/* Login credentials row */}
+                  <div className="px-4 pb-3 border-b border-gray-50">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-gray-400">Email (Login)</span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="font-mono text-gray-700 truncate">{c.email}</span>
+                          <button onClick={() => copyText(c.email, c.id * 10)} className="text-gray-400 hover:text-[#1B3875] flex-shrink-0">
+                            <ClipboardDocumentIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Password</span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-xs font-mono text-gray-500">{showPassId === c.id ? c.password : '••••••••'}</span>
+                          <button onClick={() => setShowPassId(showPassId === c.id ? null : c.id)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+                            {showPassId === c.id ? <EyeSlashIcon className="w-3.5 h-3.5" /> : <EyeIcon className="w-3.5 h-3.5" />}
+                          </button>
+                          <button onClick={() => copyText(c.password, c.id * 100)} className="text-gray-400 hover:text-[#1B3875] flex-shrink-0">
+                            <ClipboardDocumentIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact info summary */}
+                  <div className="px-4 py-3 space-y-1.5">
+                    {(c.phones?.length ?? 0) > 0 && (
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <PhoneIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <span>{c.phones.join(' / ')}</span>
+                      </div>
+                    )}
+                    {(c.emails?.length ?? 0) > 0 && (
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <EnvelopeIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{c.emails.join(', ')}</span>
+                      </div>
+                    )}
+                    {(c.lineIds?.length ?? 0) > 0 && (
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <ChatBubbleLeftEllipsisIcon className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                        <span>{c.lineIds.join(', ')}</span>
+                      </div>
+                    )}
+                    {(c.phones?.length ?? 0) === 0 && (c.emails?.length ?? 0) === 0 && (c.lineIds?.length ?? 0) === 0 && (
+                      <div className="text-xs text-gray-300 italic">ยังไม่มีข้อมูลติดต่อ</div>
+                    )}
+                  </div>
+
+                  {/* Notification badges */}
+                  <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${c.notifyViaEmail ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
+                      <EnvelopeIcon className="w-3 h-3" />แจ้ง Email {c.notifyViaEmail ? '✓' : '✗'}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${c.notifyViaLine ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
+                      <ChatBubbleLeftEllipsisIcon className="w-3 h-3" />แจ้ง LINE {c.notifyViaLine ? '✓' : '✗'}
+                    </span>
+                    <span className="text-xs text-gray-400 ml-auto">
+                      Login ล่าสุด: {c.lastLogin || '—'}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="px-4 py-2 border-t border-gray-50 bg-gray-50/50 flex items-center gap-2">
+                    {isAdmin && (
+                      <button onClick={() => openEditCust(c)}
+                        className="flex items-center gap-1 text-xs text-[#1B3875] hover:text-[#0F2654] px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+                        <PencilIcon className="w-3.5 h-3.5" />แก้ไขข้อมูลติดต่อ
+                      </button>
+                    )}
+                    <button onClick={() => copyText(`Portal: https://neft-backofficev2.vercel.app/customer-portal\nEmail: ${c.email}\nPassword: ${c.password}`, c.id)}
+                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#1B3875] px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+                      <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                      {copiedId === c.id ? 'คัดลอกแล้ว!' : 'Copy Credentials'}
+                    </button>
+                    {isAdmin && (
+                      deleteCustConfirm === c.id ? (
+                        <div className="flex items-center gap-1 ml-auto">
+                          <span className="text-xs text-red-500">ยืนยันลบ?</span>
+                          <button onClick={() => deleteCustomerAcc(c.id)} className="text-xs text-red-600 font-medium px-1 hover:text-red-800">ลบ</button>
+                          <button onClick={() => setDeleteCustConfirm(null)} className="text-xs text-gray-400 px-1">ยกเลิก</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setDeleteCustConfirm(c.id)}
+                          className="ml-auto text-gray-300 hover:text-red-500 p-1 rounded transition-colors">
                           <TrashIcon className="w-3.5 h-3.5" />
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      )
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </>
       )}
@@ -550,14 +707,136 @@ export default function UsersPage() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
           </div>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
-            หลังสร้างแล้วจะแสดง credentials ให้คัดลอกส่งให้ลูกค้าทันที
+            หลังสร้างแล้วสามารถเพิ่มข้อมูลติดต่อ (โทร, LINE, Email แจ้งเตือน) ได้จากปุ่ม "แก้ไขข้อมูลติดต่อ"
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
           <Button variant="ghost" onClick={() => setShowCustModal(false)}>{t.common.cancel}</Button>
           <Button onClick={handleCreateCustomer} disabled={!custForm.customerId || !custForm.name || !custForm.email}>
-            สร้าง Account + ดู Credentials
+            สร้าง Account
           </Button>
+        </div>
+      </Modal>
+
+      {/* ── Edit Customer Contact & Notification Modal ── */}
+      <Modal
+        open={showCustEditModal}
+        onClose={() => setShowCustEditModal(false)}
+        title={`แก้ไขข้อมูลติดต่อ — ${editingCust?.company}`}
+        size="lg"
+      >
+        {editingCust && (
+          <div className="space-y-5">
+            {/* Basic info */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
+                <UserCircleIcon className="w-3.5 h-3.5" />ชื่อผู้ติดต่อหลัก
+              </label>
+              <input
+                value={custContactForm.name}
+                onChange={e => setCustContactForm({ ...custContactForm, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3875]/20"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Phones */}
+              <MultiValueInput
+                label="เบอร์โทรศัพท์"
+                icon={<PhoneIcon className="w-3.5 h-3.5" />}
+                values={custContactForm.phones}
+                onChange={v => setCustContactForm({ ...custContactForm, phones: v })}
+                placeholder="เช่น 02-xxx-xxxx"
+                type="tel"
+              />
+              {/* Contact emails */}
+              <MultiValueInput
+                label="Email ติดต่อ (สำหรับแจ้งเตือน)"
+                icon={<EnvelopeIcon className="w-3.5 h-3.5" />}
+                values={custContactForm.emails}
+                onChange={v => setCustContactForm({ ...custContactForm, emails: v })}
+                placeholder="it@company.co.th"
+                type="email"
+              />
+              {/* LINE IDs */}
+              <MultiValueInput
+                label="LINE ID"
+                icon={<ChatBubbleLeftEllipsisIcon className="w-3.5 h-3.5 text-green-600" />}
+                values={custContactForm.lineIds}
+                onChange={v => setCustContactForm({ ...custContactForm, lineIds: v })}
+                placeholder="เช่น @company_it"
+              />
+              {/* LINE Notify tokens */}
+              <MultiValueInput
+                label="LINE Notify Token"
+                icon={<BellIcon className="w-3.5 h-3.5 text-green-600" />}
+                values={custContactForm.lineNotifyTokens}
+                onChange={v => setCustContactForm({ ...custContactForm, lineNotifyTokens: v })}
+                placeholder="Token จาก notify.line.me"
+              />
+            </div>
+
+            {/* Notification toggles */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+              <div className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+                <BellIcon className="w-4 h-4" />การแจ้งเตือนสถานะ Case อัตโนมัติ
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <EnvelopeIcon className="w-4 h-4 text-blue-500" />แจ้งเตือนทาง Email
+                  </div>
+                  <div className="text-xs text-gray-400">ส่งอีเมล์เมื่อสถานะ Case เปลี่ยน</div>
+                </div>
+                <button
+                  onClick={() => setCustContactForm({ ...custContactForm, notifyViaEmail: !custContactForm.notifyViaEmail })}
+                  className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${custContactForm.notifyViaEmail ? 'bg-blue-500' : 'bg-gray-200'}`}>
+                  <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform mt-0.5 ${custContactForm.notifyViaEmail ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <ChatBubbleLeftEllipsisIcon className="w-4 h-4 text-green-500" />แจ้งเตือนทาง LINE Notify
+                  </div>
+                  <div className="text-xs text-gray-400">ส่งข้อความเข้า LINE group/chat ของลูกค้า</div>
+                </div>
+                <button
+                  onClick={() => setCustContactForm({ ...custContactForm, notifyViaLine: !custContactForm.notifyViaLine })}
+                  className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${custContactForm.notifyViaLine ? 'bg-green-500' : 'bg-gray-200'}`}>
+                  <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform mt-0.5 ${custContactForm.notifyViaLine ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              {custContactForm.notifyViaLine && custContactForm.lineNotifyTokens.length === 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
+                  ⚠️ เปิด LINE Notify แล้ว แต่ยังไม่มี Token — ใส่ LINE Notify Token ด้านบนก่อน
+                </div>
+              )}
+              {custContactForm.notifyViaEmail && custContactForm.emails.length === 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-700">
+                  ⚠️ เปิดแจ้งเตือน Email แล้ว แต่ยังไม่มี Email ติดต่อ — ใส่ Email ด้านบนก่อน
+                </div>
+              )}
+            </div>
+
+            {/* How to get LINE Notify token */}
+            <details className="bg-green-50 border border-green-200 rounded-xl">
+              <summary className="px-4 py-3 text-xs font-semibold text-green-800 cursor-pointer select-none">
+                📱 วิธีได้รับ LINE Notify Token สำหรับลูกค้า
+              </summary>
+              <div className="px-4 pb-4 text-xs text-green-700 space-y-1.5">
+                <p>1. ลูกค้าไปที่ <span className="font-mono bg-white px-1 rounded">notify.line.me</span> → ล็อคอินด้วย LINE account</p>
+                <p>2. กด <strong>"Generate token"</strong> → ตั้งชื่อ (เช่น "NEFT Support Alert")</p>
+                <p>3. เลือก chat หรือ group ที่ต้องการรับแจ้งเตือน</p>
+                <p>4. คัดลอก token แล้วส่งให้ทีม NEFT เพื่อนำมาใส่ในระบบ</p>
+                <p className="text-green-600 font-medium">⚡ ฟรี ไม่มีค่าใช้จ่าย รองรับทั้ง 1:1 chat และ group</p>
+              </div>
+            </details>
+          </div>
+        )}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+          <Button variant="ghost" onClick={() => setShowCustEditModal(false)}>{t.common.cancel}</Button>
+          <Button onClick={handleSaveCustContact}>บันทึกข้อมูลติดต่อ</Button>
         </div>
       </Modal>
     </div>

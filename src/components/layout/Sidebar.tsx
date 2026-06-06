@@ -41,25 +41,33 @@ export default function Sidebar() {
       'flex flex-col h-screen bg-[#0F2654] text-white transition-all duration-300 flex-shrink-0',
       collapsed ? 'w-16' : 'w-60'
     )}>
-      {/* Logo */}
+      {/* Logo — white pill container so logo renders naturally on navy sidebar */}
       <div className="flex items-center justify-between px-3 py-3 border-b border-white/10">
-        {!collapsed && (
+        {!collapsed ? (
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            {/* brightness+invert makes dark logo white — blends perfectly on navy bg */}
+            <div className="bg-white rounded-xl px-3 py-1.5 shadow-sm">
+              <Image
+                src="/neft-logo.png"
+                alt="NEFT Solution"
+                width={108} height={36}
+                className="h-7 w-auto object-contain"
+                priority
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl p-1.5 mx-auto shadow-sm flex items-center justify-center w-9 h-9">
             <Image
               src="/neft-logo.png"
-              alt="NEFT Solution"
-              width={120} height={40}
-              className="h-8 w-auto object-contain brightness-0 invert"
+              alt="NEFT"
+              width={28} height={28}
+              className="w-5 h-5 object-contain"
               priority
             />
           </div>
         )}
-        {collapsed && (
-          <div className="w-8 h-8 bg-gradient-to-br from-[#E84B0F] to-[#c93d08] rounded-lg flex items-center justify-center font-black text-sm mx-auto shadow-md">N</div>
-        )}
-        <button onClick={() => setCollapsed(!collapsed)} className="text-blue-300 hover:text-white p-1 rounded flex-shrink-0">
-          {collapsed ? <ChevronDoubleRightIcon className="w-4 h-4" /> : <ChevronDoubleLeftIcon className="w-4 h-4" />}
+        <button onClick={() => setCollapsed(!collapsed)} className="text-white/40 hover:text-white p-1 rounded flex-shrink-0 ml-1">
+          {collapsed ? <ChevronDoubleRightIcon className="w-3.5 h-3.5" /> : <ChevronDoubleLeftIcon className="w-3.5 h-3.5" />}
         </button>
       </div>
 
@@ -70,10 +78,10 @@ export default function Sidebar() {
           return (
             <Link key={href} href={href}
               className={clsx(
-                'flex items-center gap-3 px-4 py-3 text-sm transition-all relative',
+                'flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl text-sm transition-all relative',
                 active
-                  ? 'bg-[#1B5BC6] text-white border-r-2 border-[#E84B0F]'
-                  : 'text-blue-200 hover:bg-white/10 hover:text-white'
+                  ? 'bg-white/15 text-white font-medium shadow-sm border border-white/10'
+                  : 'text-blue-200/80 hover:bg-white/8 hover:text-white'
               )}
             >
               <div className="relative flex-shrink-0">

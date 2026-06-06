@@ -50,13 +50,13 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm">
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-br from-[#0F2654] via-[#1B3875] to-[#1a4a9e] px-8 py-8 text-center">
-            <div className="flex justify-center mb-3">
-              <Image src="/neft-logo.png" alt="NEFT Solution" width={160} height={54} className="h-12 w-auto object-contain brightness-0 invert drop-shadow-lg" priority />
+          {/* Header — white bg so logo shows naturally without invert */}
+          <div className="bg-white px-8 pt-8 pb-5 text-center border-b border-gray-100">
+            <div className="flex justify-center mb-4">
+              <Image src="/neft-logo.png" alt="NEFT Solution" width={160} height={54} className="h-12 w-auto object-contain" priority />
             </div>
-            <div className="w-12 h-px bg-[#E84B0F] mx-auto mb-3 opacity-80" />
-            <p className="text-blue-200 text-sm">{t.login.subtitle}</p>
+            <div className="w-14 h-0.5 bg-[#E84B0F] mx-auto mb-3 rounded-full" />
+            <p className="text-[#0F2654] font-semibold text-sm">{t.login.subtitle}</p>
           </div>
 
           {/* Form */}

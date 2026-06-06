@@ -38,6 +38,10 @@ export default function ServicePage() {
   })
   const [escForm, setEscForm] = useState({ level: 2, escalatedTo: '', reason: '' })
   const [logForm, setLogForm] = useState({ action: 'In Progress', note: '' })
+  const [resolveForm, setResolveForm] = useState({ rootCause: '', resolution: '', note: '' })
+  const [showResolveModal, setShowResolveModal] = useState(false)
+  const [assignForm, setAssignForm] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const filteredTickets = tickets.filter(tk =>
     (filterSev === 'all' || tk.severity === filterSev) &&
@@ -130,22 +134,41 @@ export default function ServicePage() {
     if (!detailTicket) return
     const now = new Date().toISOString()
     addWorkLog(detailTicket.id, {
-      id: Date.now(), time: now, user: 'Service Team',
+      id: Date.now(), time: now,
+      user: 'Service Team',
       action: logForm.action, note: logForm.note
     })
-    // auto-update status based on action
     const statusMap: Record<string, string> = {
-      'Resolved': 'Resolved', 'Closed': 'Closed', 'In Progress': 'In Progress',
-      'Pending Customer': 'Pending Customer', 'Pending Vendor': 'Pending Vendor'
+      'In Progress': 'In Progress',
+      'Pending Customer': 'Pending Customer',
+      'Pending Vendor': 'Pending Vendor',
+      'Closed': 'Closed',
     }
     if (statusMap[logForm.action]) {
       const extra: Record<string, string | null> = {}
-      if (logForm.action === 'Resolved') extra.resolvedAt = now
       if (logForm.action === 'Closed') extra.closedAt = now
       updateTicket(detailTicket.id, { status: statusMap[logForm.action] as any, ...extra as any })
     }
     setShowLogModal(false)
     setLogForm({ action: 'In Progress', note: '' })
+  }
+
+  const handleResolve = () => {
+    if (!detailTicket) return
+    const now = new Date().toISOString()
+    updateTicket(detailTicket.id, {
+      status: 'Resolved' as any,
+      rootCause: resolveForm.rootCause,
+      resolution: resolveForm.resolution,
+      resolvedAt: now,
+    })
+    addWorkLog(detailTicket.id, {
+      id: Date.now(), time: now, user: 'Service Team',
+      action: 'Resolved',
+      note: `✅ Root Cause: ${resolveForm.rootCause} | วิธีแก้ไข: ${resolveForm.resolution}${resolveForm.note ? ` | หมายเหตุ: ${resolveForm.note}` : ''}`
+    })
+    setShowResolveModal(false)
+    setResolveForm({ rootCause: '', resolution: '', note: '' })
   }
 
   const copyTicketNo = (no: string) => {
@@ -577,28 +600,75 @@ export default function ServicePage() {
               </div>
             )}
 
-            {/* Actions */}
+            {/* Engineer Actions */}
             <div className="pt-3 border-t border-gray-100 space-y-3">
-              {/* Status Update */}
+              {/* Assign */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-gray-600 whitespace-nowrap">มอบหมาย:</label>
+                <input
+                  value={assignForm || detailTicket.assignedTo}
+                  onChange={e => setAssignForm(e.target.value)}
+                  className="flex-1 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none"
+                  placeholder="ชื่อ Engineer" />
+                <Button size="sm" onClick={() => {
+                  if (assignForm) {
+                    const now = new Date().toISOString()
+                    updateTicket(detailTicket.id, { assignedTo: assignForm, status: 'Assigned' as any })
+                    addWorkLog(detailTicket.id, { id: Date.now(), time: now, user: 'Service Team', action: 'Assigned', note: `มอบหมายให้ ${assignForm}` })
+                    setAssignForm('')
+                  }
+                }}>บันทึก</Button>
+              </div>
+
+              {/* Status quick-update (excluding Resolved — use dedicated button) */}
               <div>
                 <label className="text-xs font-semibold text-gray-600 mb-2 block">อัปเดตสถานะ</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {TICKET_STATUSES.map(s => (
-                    <button key={s} onClick={() => updateTicket(detailTicket.id, { status: s as any })}
-                      className={`text-xs px-3 py-1.5 rounded-lg transition-colors border ${detailTicket.status === s ? 'bg-[#1B3875] text-white border-[#1B3875]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#1B3875]/50'}`}>
+                  {TICKET_STATUSES.filter(s => s !== 'Resolved').map(s => (
+                    <button key={s} onClick={() => {
+                      const now = new Date().toISOString()
+                      updateTicket(detailTicket.id, { status: s as any, ...(s === 'Closed' ? { closedAt: now } : {}) })
+                      addWorkLog(detailTicket.id, { id: Date.now(), time: now, user: 'Service Team', action: s, note: `อัปเดตสถานะเป็น ${s}` })
+                    }}
+                      className={`text-xs px-3 py-1.5 rounded-lg transition-colors border ${detailTicket.status === s ? 'bg-[#1B3875] text-white border-[#1B3875]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#1B3875]/40'}`}>
                       {s}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Escalation & Delete */}
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* Action buttons row */}
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                <Button size="sm" icon={<ChatBubbleLeftRightIcon className="w-4 h-4" />}
+                  onClick={() => setShowLogModal(true)}>เพิ่ม Work Log</Button>
                 <Button variant="outline" size="sm" icon={<ArrowUpCircleIcon className="w-4 h-4" />}
-                  onClick={() => setShowEscModal(true)}>ยกระดับปัญหา (Escalate)</Button>
-                <Button variant="ghost" size="sm" onClick={() => { deleteTicket(detailTicket.id); setShowDetail(null) }}
-                  className="text-red-500 hover:text-red-700">ลบ Case</Button>
+                  onClick={() => setShowEscModal(true)}>Escalate</Button>
+                {!['Resolved', 'Closed'].includes(detailTicket.status) && (
+                  <Button size="sm"
+                    className="!bg-green-600 hover:!bg-green-700 !text-white"
+                    icon={<CheckCircleIcon className="w-4 h-4" />}
+                    onClick={() => setShowResolveModal(true)}>
+                    Resolve Case
+                  </Button>
+                )}
+                <button onClick={() => setShowDeleteConfirm(true)}
+                  className="ml-auto text-xs text-red-400 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                  ลบ Case
+                </button>
               </div>
+
+              {/* Delete confirm inline */}
+              {showDeleteConfirm && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs">
+                  <p className="text-red-700 font-semibold mb-2">ยืนยันการลบ Case {detailTicket.no}?</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => { deleteTicket(detailTicket.id); setShowDetail(null); setShowDeleteConfirm(false) }}
+                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700">ยืนยันลบ</button>
+                    <button onClick={() => setShowDeleteConfirm(false)}
+                      className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">ยกเลิก</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -634,6 +704,42 @@ export default function ServicePage() {
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
           <Button variant="ghost" onClick={() => setShowEscModal(false)}>ยกเลิก</Button>
           <Button onClick={handleEscalate} disabled={!escForm.escalatedTo || !escForm.reason}>ยืนยัน Escalate</Button>
+        </div>
+      </Modal>
+
+      {/* ─── Resolve Case Modal ─── */}
+      <Modal open={showResolveModal} onClose={() => setShowResolveModal(false)} title="✅ ปิด / Resolve Case" size="md">
+        <div className="space-y-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 text-xs text-green-700">
+            การ Resolve case ต้องบันทึก Root Cause และวิธีแก้ไขทุกครั้ง เพื่อใช้อ้างอิงและปรับปรุงกระบวนการ
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Root Cause (สาเหตุที่แท้จริง) *</label>
+            <textarea rows={2} value={resolveForm.rootCause} onChange={e => setResolveForm({ ...resolveForm, rootCause: e.target.value })}
+              placeholder="เช่น Hardware failure — HDD bad sector, Configuration error — VLAN misconfigured..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">วิธีแก้ไข (Resolution) *</label>
+            <textarea rows={3} value={resolveForm.resolution} onChange={e => setResolveForm({ ...resolveForm, resolution: e.target.value })}
+              placeholder="อธิบายขั้นตอนที่ทำเพื่อแก้ไขปัญหา รวมถึง preventive action..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">หมายเหตุเพิ่มเติม</label>
+            <input value={resolveForm.note} onChange={e => setResolveForm({ ...resolveForm, note: e.target.value })}
+              placeholder="คำแนะนำเพิ่มเติม ไฟล์อ้างอิง ฯลฯ"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+          <Button variant="ghost" onClick={() => setShowResolveModal(false)}>ยกเลิก</Button>
+          <Button
+            className="!bg-green-600 hover:!bg-green-700"
+            onClick={handleResolve}
+            disabled={!resolveForm.rootCause || !resolveForm.resolution}>
+            ยืนยัน Resolve + บันทึก
+          </Button>
         </div>
       </Modal>
 

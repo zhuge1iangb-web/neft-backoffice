@@ -93,6 +93,13 @@ const EVENT_LABEL_TH: Record<TicketNotifyEvent, string> = {
   closed: 'ปิดเคส',
 }
 
+const EVENT_LABEL_EN: Record<TicketNotifyEvent, string> = {
+  created: 'New Case Opened',
+  statusChanged: 'Case Status Updated',
+  workLogAdded: 'New Progress Update',
+  closed: 'Case Closed',
+}
+
 const EVENT_SUBJECT_TH: Record<TicketNotifyEvent, string> = {
   created: 'แจ้งเปิดเคสใหม่',
   statusChanged: 'แจ้งอัปเดตสถานะเคส',
@@ -100,8 +107,16 @@ const EVENT_SUBJECT_TH: Record<TicketNotifyEvent, string> = {
   closed: 'แจ้งปิดเคส',
 }
 
+const EVENT_SUBJECT_EN: Record<TicketNotifyEvent, string> = {
+  created: 'New Case Opened',
+  statusChanged: 'Case Status Update',
+  workLogAdded: 'Case Progress Update',
+  closed: 'Case Closed',
+}
+
 /**
  * สร้างข้อความแจ้งเตือนตาม "เหตุการณ์" ของเคส (ใช้ในระบบแจ้งเตือนอัตโนมัติ)
+ * อีเมลจะแสดงสองภาษาในฉบับเดียวกัน — อังกฤษก่อน แล้วตามด้วยไทย
  */
 export function buildTicketEventMessage(opts: {
   event: TicketNotifyEvent
@@ -111,52 +126,100 @@ export function buildTicketEventMessage(opts: {
 }): { subject: string; text: string } {
   const { event, ticket, prevStatus, workLog } = opts
 
-  const lines: string[] = []
-  lines.push(`เรียน ลูกค้า ${ticket.customerName}`)
-  lines.push('')
-  lines.push(`${EVENT_LABEL_TH[event]} — เลขที่เคส ${ticket.no}`)
-  lines.push('')
-  lines.push(`เรื่อง: ${ticket.subject}`)
-  lines.push(`ระดับความรุนแรง: ${ticket.severity}`)
-  lines.push(`ผู้รับผิดชอบ: ${ticket.assignedTo}`)
+  // ── English section ──────────────────────────────────────────────
+  const en: string[] = []
+  en.push(`Dear ${ticket.customerName},`)
+  en.push('')
+  en.push(`${EVENT_LABEL_EN[event]} — Case No. ${ticket.no}`)
+  en.push('')
+  en.push(`Subject: ${ticket.subject}`)
+  en.push(`Severity: ${ticket.severity}`)
+  en.push(`Assigned to: ${ticket.assignedTo}`)
 
   switch (event) {
     case 'created':
-      lines.push(`สถานะ: ${ticket.status}`)
+      en.push(`Status: ${ticket.status}`)
       if (ticket.description) {
-        lines.push('')
-        lines.push(`รายละเอียดที่แจ้ง: ${ticket.description}`)
+        en.push('')
+        en.push(`Reported details: ${ticket.description}`)
       }
-      lines.push('')
-      lines.push('ทีมงานได้รับเรื่องและจะดำเนินการตรวจสอบโดยเร็วที่สุด')
+      en.push('')
+      en.push('Our team has received your case and will begin investigating as soon as possible.')
       break
     case 'statusChanged':
-      lines.push('')
-      lines.push(`สถานะเปลี่ยนจาก "${prevStatus ?? '-'}" เป็น "${ticket.status}"`)
+      en.push('')
+      en.push(`Status changed from "${prevStatus ?? '-'}" to "${ticket.status}"`)
       break
     case 'workLogAdded':
-      lines.push(`สถานะปัจจุบัน: ${ticket.status}`)
+      en.push(`Current status: ${ticket.status}`)
       if (workLog) {
-        lines.push('')
-        lines.push(`ความคืบหน้าล่าสุด: ${workLog.action}`)
-        if (workLog.note) lines.push(`รายละเอียด: ${workLog.note}`)
-        lines.push(`บันทึกโดย: ${workLog.user}`)
+        en.push('')
+        en.push(`Latest update: ${workLog.action}`)
+        if (workLog.note) en.push(`Details: ${workLog.note}`)
+        en.push(`Logged by: ${workLog.user}`)
       }
       break
     case 'closed':
-      lines.push('')
-      lines.push('เคสนี้ได้รับการปิดเรียบร้อยแล้ว ขอบคุณที่ใช้บริการ')
+      en.push('')
+      en.push('This case has been closed. Thank you for using our service.')
       break
   }
 
-  lines.push('')
-  lines.push('— ทีมงาน NEFT Solution')
-  lines.push('(อีเมลฉบับนี้เป็นการแจ้งเตือนอัตโนมัติ กรุณาอย่าตอบกลับอีเมลฉบับนี้โดยตรง)')
-  lines.push('สอบถามเพิ่มเติม: support@neftsolution.co.th')
+  en.push('')
+  en.push('— NEFT Solution Team')
+  en.push('(This is an automated notification — please do not reply directly to this email.)')
+  en.push('Support: support@neftsolution.co.th')
+
+  // ── Thai section ─────────────────────────────────────────────────
+  const th: string[] = []
+  th.push(`เรียน ลูกค้า ${ticket.customerName}`)
+  th.push('')
+  th.push(`${EVENT_LABEL_TH[event]} — เลขที่เคส ${ticket.no}`)
+  th.push('')
+  th.push(`เรื่อง: ${ticket.subject}`)
+  th.push(`ระดับความรุนแรง: ${ticket.severity}`)
+  th.push(`ผู้รับผิดชอบ: ${ticket.assignedTo}`)
+
+  switch (event) {
+    case 'created':
+      th.push(`สถานะ: ${ticket.status}`)
+      if (ticket.description) {
+        th.push('')
+        th.push(`รายละเอียดที่แจ้ง: ${ticket.description}`)
+      }
+      th.push('')
+      th.push('ทีมงานได้รับเรื่องและจะดำเนินการตรวจสอบโดยเร็วที่สุด')
+      break
+    case 'statusChanged':
+      th.push('')
+      th.push(`สถานะเปลี่ยนจาก "${prevStatus ?? '-'}" เป็น "${ticket.status}"`)
+      break
+    case 'workLogAdded':
+      th.push(`สถานะปัจจุบัน: ${ticket.status}`)
+      if (workLog) {
+        th.push('')
+        th.push(`ความคืบหน้าล่าสุด: ${workLog.action}`)
+        if (workLog.note) th.push(`รายละเอียด: ${workLog.note}`)
+        th.push(`บันทึกโดย: ${workLog.user}`)
+      }
+      break
+    case 'closed':
+      th.push('')
+      th.push('เคสนี้ได้รับการปิดเรียบร้อยแล้ว ขอบคุณที่ใช้บริการ')
+      break
+  }
+
+  th.push('')
+  th.push('— ทีมงาน NEFT Solution')
+  th.push('(อีเมลฉบับนี้เป็นการแจ้งเตือนอัตโนมัติ กรุณาอย่าตอบกลับอีเมลฉบับนี้โดยตรง)')
+  th.push('สอบถามเพิ่มเติม: support@neftsolution.co.th')
+
+  const divider = '────────────────────────────'
+  const text = [...en, '', divider, ''].concat(th).join('\n')
 
   return {
-    subject: `[NEFT] ${EVENT_SUBJECT_TH[event]} — ${ticket.no} (${ticket.customerName})`,
-    text: lines.join('\n'),
+    subject: `[NEFT] ${EVENT_SUBJECT_EN[event]} / ${EVENT_SUBJECT_TH[event]} — ${ticket.no} (${ticket.customerName})`,
+    text,
   }
 }
 

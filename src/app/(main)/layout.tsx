@@ -29,14 +29,17 @@ function usePageTitle() {
 }
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, initialized, initialize } = useAppStore()
+  const { currentUser, initialized, initialize, hasHydrated } = useAppStore()
   const router = useRouter()
   const title = usePageTitle()
   useSLAAlerts()
 
+  // Wait for the persisted store to rehydrate from localStorage before deciding
+  // whether to redirect — otherwise currentUser is briefly null on every page
+  // refresh and this bounces the user back to the login page.
   useEffect(() => {
-    if (!currentUser) router.replace('/')
-  }, [currentUser, router])
+    if (hasHydrated && !currentUser) router.replace('/')
+  }, [hasHydrated, currentUser, router])
 
   useEffect(() => {
     if (currentUser && !initialized) {
@@ -44,7 +47,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   }, [currentUser, initialized, initialize])
 
-  if (!currentUser) return null
+  if (!hasHydrated || !currentUser) return null
 
   const isLoading = hasSupabase && !initialized
 

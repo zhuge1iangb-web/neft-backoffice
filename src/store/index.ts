@@ -42,6 +42,8 @@ const INITIAL_CUSTOMER_PORTAL_ACCOUNTS: CustomerPortalAccount[] = [
 
 interface AppState {
   currentUser: User | null
+  hasHydrated: boolean
+  setHasHydrated: (v: boolean) => void
   login: (username: string, password: string) => boolean
   logout: () => void
   lang: Lang
@@ -143,6 +145,8 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       currentUser: null,
+      hasHydrated: false,
+      setHasHydrated: (v) => set({ hasHydrated: v }),
       login: (username, password) => {
         const user = demoUsers.find(u => u.username === username && u.password === password)
         if (user) { set({ currentUser: user }); return true }
@@ -535,6 +539,9 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'neft-store',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
       partialize: (state) => ({
         currentUser: state.currentUser,
         lang: state.lang,

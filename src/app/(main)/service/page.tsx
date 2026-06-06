@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAppStore } from '@/store'
 import { translations } from '@/lib/translations'
 import { formatDate, exportToExcel, exportToPdf } from '@/lib/export'
@@ -9,15 +9,49 @@ import Modal from '@/components/ui/Modal'
 import {
   PlusIcon, MagnifyingGlassIcon, ArrowDownTrayIcon, DocumentArrowDownIcon,
   ExclamationTriangleIcon, PhoneIcon, EnvelopeIcon, GlobeAltIcon,
-  ArrowUpCircleIcon, CheckCircleIcon, ClockIcon, UserIcon,
-  ClipboardDocumentIcon, ChatBubbleLeftRightIcon
+  CheckCircleIcon, ClockIcon, UserIcon, PaperClipIcon,
+  ClipboardDocumentIcon, ChatBubbleLeftRightIcon, PencilSquareIcon, TrashIcon,
+  XMarkIcon, ArrowUpCircleIcon
 } from '@heroicons/react/24/outline'
 import type { WorkLog } from '@/lib/demo-data'
 
 const SEVERITIES = ['Critical', 'High', 'Medium', 'Low']
-const TICKET_STATUSES = ['Open', 'Assigned', 'In Progress', 'Pending Customer', 'Pending Vendor', 'Escalated', 'Resolved', 'Closed']
 const CHANNELS = ['Phone', 'Web', 'Email']
 const ESC_LEVELS = ['ไม่มีการยกระดับ', 'L1 - Internal Support', 'L2 - Specialist/3rd Party', 'L3 - Manufacturer/Vendor']
+
+// Work log actions including escalation options
+const LOG_ACTIONS = [
+  'Investigating',
+  'On-site Visit',
+  'Remote Support',
+  'In Progress',
+  'Parts Ordered',
+  'Pending Customer',
+  'Pending Vendor',
+  'Escalated L1 - Internal Support',
+  'Escalated L2 - Specialist/3rd Party',
+  'Escalated L3 - Manufacturer/Vendor',
+  'Resolved',
+  'Closed',
+  'Other',
+]
+
+// Status pipeline order (for progress display)
+const STATUS_PIPELINE = ['Open', 'Assigned', 'In Progress', 'Pending Customer', 'Pending Vendor', 'Escalated', 'Resolved', 'Closed']
+
+// Map log action → ticket status
+const ACTION_STATUS_MAP: Record<string, string> = {
+  'In Progress': 'In Progress',
+  'Pending Customer': 'Pending Customer',
+  'Pending Vendor': 'Pending Vendor',
+  'Resolved': 'Resolved',
+  'Closed': 'Closed',
+  'Escalated L1 - Internal Support': 'Escalated',
+  'Escalated L2 - Specialist/3rd Party': 'Escalated',
+  'Escalated L3 - Manufacturer/Vendor': 'Escalated',
+}
+
+type Attachment = { name: string; size: number; type: string; data: string }
 
 export default function ServicePage() {
   const { lang, tickets, contracts, addTicket, updateTicket, deleteTicket, addWorkLog, customers } = useAppStore()
@@ -28,25 +62,42 @@ export default function ServicePage() {
   const [activeTab, setActiveTab] = useState<'tickets' | 'contracts'>('tickets')
   const [showModal, setShowModal] = useState(false)
   const [showDetail, setShowDetail] = useState<number | null>(null)
-  const [showEscModal, setShowEscModal] = useState(false)
   const [showLogModal, setShowLogModal] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Forms
   const [form, setForm] = useState({
     customerId: '', subject: '', description: '', severity: 'Medium',
-    channel: 'Web', contactName: '', contactPhone: '', contactEmail: '', assignedTo: ''
+    channel: 'Web', contactName: '', contactPhone: '', contactEmail: '',
+    contactLineId: '', notifyEmail: true, notifyLine: false, assignedTo: ''
   })
-  const [escForm, setEscForm] = useState({ level: 2, escalatedTo: '', reason: '' })
-  const [logForm, setLogForm] = useState({ action: 'In Progress', note: '' })
+  const [logForm, setLogForm] = useState({ action: 'In Progress', note: '', escalateTo: '', escalateLevel: 1 })
   const [resolveForm, setResolveForm] = useState({ rootCause: '', resolution: '', note: '' })
   const [showResolveModal, setShowResolveModal] = useState(false)
   const [assignForm, setAssignForm] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  // Attachments for new ticket
+  const [ticketAttachments, setTicketAttachments] = useState<Attachment[]>([])
+  const ticketFileRef = useRef<HTMLInputElement>(null)
+
+  // Attachments for work log
+  const [logAttachments, setLogAttachments] = useState<Attachment[]>([])
+  const logFileRef = useRef<HTMLInputElement>(null)
+
+  // Edit/delete log
+  const [editingLog, setEditingLog] = useState<WorkLog | null>(null)
+  const [editLogForm, setEditLogForm] = useState({ action: '', note: '' })
+  const [deleteLogId, setDeleteLogId] = useState<number | null>(null)
+
   const filteredTickets = tickets.filter(tk =>
     (filterSev === 'all' || tk.severity === filterSev) &&
-    (filterStatus === 'all' || (filterStatus === 'active' ? !['Resolved', 'Closed'].includes(tk.status) : ['Resolved', 'Closed'].includes(tk.status))) &&
-    (tk.subject.toLowerCase().includes(search.toLowerCase()) || tk.customerName.toLowerCase().includes(search.toLowerCase()) || tk.no.toLowerCase().includes(search.toLowerCase()))
+    (filterStatus === 'all' || (filterStatus === 'active'
+      ? !['Resolved', 'Closed'].includes(tk.status)
+      : ['Resolved', 'Closed'].includes(tk.status))) &&
+    (tk.subject.toLowerCase().includes(search.toLowerCase()) ||
+      tk.customerName.toLowerCase().includes(search.toLowerCase()) ||
+      tk.no.toLowerCase().includes(search.toLowerCase()))
   )
 
   const openTickets = tickets.filter(t => !['Resolved', 'Closed'].includes(t.status))
@@ -56,7 +107,11 @@ export default function ServicePage() {
   const slaBreach = openTickets.filter(t => t.slaStatus === 'Breached')
   const detailTicket = showDetail !== null ? tickets.find(t => t.id === showDetail) : null
 
-  // Channel icons
+  // Check if ticket has a Resolved log but not yet officially closed
+  const hasResolvedLog = (tk: typeof detailTicket) =>
+    tk && (tk.workLogs || []).some((l: WorkLog) => l.action === 'Resolved') && !['Resolved', 'Closed'].includes(tk.status)
+
+  // Channel helpers
   const channelIcon = (ch: string) => {
     if (ch === 'Phone') return <PhoneIcon className="w-3.5 h-3.5 text-green-600" />
     if (ch === 'Email') return <EnvelopeIcon className="w-3.5 h-3.5 text-blue-600" />
@@ -64,11 +119,24 @@ export default function ServicePage() {
   }
   const channelBg = (ch: string) => ch === 'Phone' ? 'bg-green-50 text-green-700' : ch === 'Email' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
 
-  const escLevelBadge = (lvl: number) => {
-    if (lvl === 0) return null
-    const colors = ['', 'bg-yellow-100 text-yellow-800', 'bg-orange-100 text-orange-800', 'bg-red-100 text-red-800']
-    const labels = ['', 'L1 Internal', 'L2 Specialist', 'L3 Manufacturer']
-    return <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${colors[lvl]}`}><ArrowUpCircleIcon className="w-3 h-3" />{labels[lvl]}</span>
+  const statusColor = (s: string) => {
+    if (s === 'Resolved' || s === 'Closed') return 'success'
+    if (s === 'Escalated' || s === 'Open') return 'danger'
+    return 'warning'
+  }
+
+  const timelineActionColor = (action: string) => {
+    if (action.includes('Resolved') || action === 'Closed') return 'bg-green-100 text-green-700 border-green-200'
+    if (action.includes('Escalated')) return 'bg-red-100 text-red-700 border-red-200'
+    if (action === 'Ticket Opened') return 'bg-blue-100 text-blue-700 border-blue-200'
+    if (action === 'Pending Customer' || action === 'Pending Vendor') return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+    return 'bg-gray-100 text-gray-700 border-gray-200'
+  }
+
+  // Current status step index
+  const currentStatusStep = (status: string) => {
+    const idx = STATUS_PIPELINE.indexOf(status)
+    return idx === -1 ? 0 : idx
   }
 
   // Auto-generate ticket number
@@ -81,11 +149,25 @@ export default function ServicePage() {
     return `TK-${year}-${String(maxNo + 1).padStart(4, '0')}`
   }
 
+  // File reading helper
+  const readFiles = (files: FileList, cb: (attachments: Attachment[]) => void) => {
+    const results: Attachment[] = []
+    let done = 0
+    Array.from(files).forEach(file => {
+      const reader = new FileReader()
+      reader.onload = e => {
+        results.push({ name: file.name, size: file.size, type: file.type, data: e.target?.result as string })
+        done++
+        if (done === files.length) cb(results)
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleAdd = () => {
     const cust = customers.find(c => c.id === +form.customerId)
     const now = new Date().toISOString()
     const no = nextTicketNo()
-    // SLA: Critical=4h, High=8h, Medium=24h, Low=48h response
     const slaHours: Record<string, number> = { Critical: 4, High: 8, Medium: 24, Low: 48 }
     const respDue = new Date(Date.now() + slaHours[form.severity] * 3600000)
     const resDue = new Date(Date.now() + slaHours[form.severity] * 3 * 3600000)
@@ -104,53 +186,58 @@ export default function ServicePage() {
       rootCause: '', resolution: '', resolvedAt: null, closedAt: null,
       workLogs: [{
         id: 1, time: now, user: 'ระบบ', action: 'Ticket Opened',
-        note: `รับแจ้งปัญหาผ่าน${form.channel} ออก Case Number ${no} แจ้งลูกค้าแล้ว`
+        note: `รับแจ้งปัญหาผ่าน${form.channel} ออก Case Number ${no}${form.contactEmail ? ` · แจ้ง Email: ${form.contactEmail}` : ''}${(form as any).contactLineId ? ` · Line ID: ${(form as any).contactLineId}` : ''}`
       }]
-    })
+    } as any)
     setShowModal(false)
-    setForm({ customerId: '', subject: '', description: '', severity: 'Medium', channel: 'Web', contactName: '', contactPhone: '', contactEmail: '', assignedTo: '' })
-  }
-
-  const handleEscalate = () => {
-    if (!detailTicket) return
-    const now = new Date().toISOString()
-    updateTicket(detailTicket.id, {
-      status: 'Escalated' as any,
-      escalationLevel: escForm.level as any,
-      escalatedTo: escForm.escalatedTo,
-      escalatedAt: now,
-      escalationReason: escForm.reason,
-    })
-    addWorkLog(detailTicket.id, {
-      id: Date.now(), time: now, user: 'Service Team',
-      action: `Escalated to ${ESC_LEVELS[escForm.level]}`,
-      note: `ยกระดับไปยัง: ${escForm.escalatedTo} | เหตุผล: ${escForm.reason}`
-    })
-    setShowEscModal(false)
-    setEscForm({ level: 2, escalatedTo: '', reason: '' })
+    setTicketAttachments([])
+    setForm({ customerId: '', subject: '', description: '', severity: 'Medium', channel: 'Web', contactName: '', contactPhone: '', contactEmail: '', contactLineId: '', notifyEmail: true, notifyLine: false, assignedTo: '' })
   }
 
   const handleAddLog = () => {
     if (!detailTicket) return
     const now = new Date().toISOString()
+    const isEscalate = logForm.action.startsWith('Escalated')
+    const levelMap: Record<string, number> = {
+      'Escalated L1 - Internal Support': 1,
+      'Escalated L2 - Specialist/3rd Party': 2,
+      'Escalated L3 - Manufacturer/Vendor': 3,
+    }
+    const note = isEscalate && logForm.escalateTo
+      ? `${logForm.note} | ยกระดับไปยัง: ${logForm.escalateTo}`
+      : logForm.note
+
     addWorkLog(detailTicket.id, {
       id: Date.now(), time: now,
       user: 'Service Team',
-      action: logForm.action, note: logForm.note
-    })
-    const statusMap: Record<string, string> = {
-      'In Progress': 'In Progress',
-      'Pending Customer': 'Pending Customer',
-      'Pending Vendor': 'Pending Vendor',
-      'Closed': 'Closed',
+      action: logForm.action, note
+    } as any)
+
+    const newStatus = ACTION_STATUS_MAP[logForm.action]
+    if (newStatus) {
+      const extra: any = {}
+      if (newStatus === 'Closed') extra.closedAt = now
+      if (isEscalate) {
+        extra.escalationLevel = levelMap[logForm.action] || 1
+        extra.escalatedTo = logForm.escalateTo
+        extra.escalatedAt = now
+        extra.escalationReason = logForm.note
+      }
+      updateTicket(detailTicket.id, { status: newStatus as any, ...extra })
     }
-    if (statusMap[logForm.action]) {
-      const extra: Record<string, string | null> = {}
-      if (logForm.action === 'Closed') extra.closedAt = now
-      updateTicket(detailTicket.id, { status: statusMap[logForm.action] as any, ...extra as any })
+
+    // If Resolved log added → prompt resolve modal
+    if (logForm.action === 'Resolved') {
+      setShowLogModal(false)
+      setLogForm({ action: 'In Progress', note: '', escalateTo: '', escalateLevel: 1 })
+      setLogAttachments([])
+      setTimeout(() => setShowResolveModal(true), 200)
+      return
     }
+
     setShowLogModal(false)
-    setLogForm({ action: 'In Progress', note: '' })
+    setLogForm({ action: 'In Progress', note: '', escalateTo: '', escalateLevel: 1 })
+    setLogAttachments([])
   }
 
   const handleResolve = () => {
@@ -166,9 +253,25 @@ export default function ServicePage() {
       id: Date.now(), time: now, user: 'Service Team',
       action: 'Resolved',
       note: `✅ Root Cause: ${resolveForm.rootCause} | วิธีแก้ไข: ${resolveForm.resolution}${resolveForm.note ? ` | หมายเหตุ: ${resolveForm.note}` : ''}`
-    })
+    } as any)
     setShowResolveModal(false)
     setResolveForm({ rootCause: '', resolution: '', note: '' })
+  }
+
+  const handleEditLog = () => {
+    if (!detailTicket || !editingLog) return
+    const updatedLogs = (detailTicket.workLogs || []).map((l: WorkLog) =>
+      l.id === editingLog.id ? { ...l, action: editLogForm.action, note: editLogForm.note } : l
+    )
+    updateTicket(detailTicket.id, { workLogs: updatedLogs } as any)
+    setEditingLog(null)
+  }
+
+  const handleDeleteLog = (logId: number) => {
+    if (!detailTicket) return
+    const updatedLogs = (detailTicket.workLogs || []).filter((l: WorkLog) => l.id !== logId)
+    updateTicket(detailTicket.id, { workLogs: updatedLogs } as any)
+    setDeleteLogId(null)
   }
 
   const copyTicketNo = (no: string) => {
@@ -177,8 +280,10 @@ export default function ServicePage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const excelHeaders = ['เลขที่', 'ลูกค้า', 'หัวข้อ', 'ช่องทาง', 'ระดับ', 'สถานะ', 'SLA', 'Escalation', 'ผู้รับผิดชอบ', 'วันที่สร้าง']
-  const excelKeys = ['no', 'customerName', 'subject', 'channel', 'severity', 'status', 'slaStatus', 'escalatedTo', 'assignedTo', 'createdAt']
+  const formatBytes = (bytes: number) => bytes < 1024 ? `${bytes}B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)}KB` : `${(bytes / 1048576).toFixed(1)}MB`
+
+  const excelHeaders = ['เลขที่', 'ลูกค้า', 'หัวข้อ', 'ช่องทาง', 'ระดับ', 'สถานะ', 'SLA', 'ผู้รับผิดชอบ', 'วันที่สร้าง']
+  const excelKeys = ['no', 'customerName', 'subject', 'channel', 'severity', 'status', 'slaStatus', 'assignedTo', 'createdAt']
 
   const sevColors: Record<string, string> = {
     Critical: 'border-l-4 border-red-500 bg-red-50/30',
@@ -187,29 +292,16 @@ export default function ServicePage() {
     Low: 'border-l-4 border-blue-400 bg-blue-50/20'
   }
 
-  const statusColor = (s: string) => {
-    if (s === 'Resolved' || s === 'Closed') return 'success'
-    if (s === 'Escalated') return 'danger'
-    if (s === 'Open') return 'danger'
-    return 'warning'
-  }
-
-  const timelineActionColor = (action: string) => {
-    if (action.includes('Resolved') || action.includes('Closed')) return 'bg-green-100 text-green-700 border-green-200'
-    if (action.includes('Escalated')) return 'bg-red-100 text-red-700 border-red-200'
-    if (action.includes('Opened')) return 'bg-blue-100 text-blue-700 border-blue-200'
-    return 'bg-gray-100 text-gray-700 border-gray-200'
-  }
+  const isEscalateAction = logForm.action.startsWith('Escalated')
 
   return (
     <div className="space-y-4">
-      {/* TOR Compliance Banner */}
+      {/* TOR Banner */}
       <div className="bg-[#0F2654]/5 border border-[#1B3875]/20 rounded-xl px-4 py-2.5 flex items-center gap-3">
         <CheckCircleIcon className="w-5 h-5 text-[#1B3875] flex-shrink-0" />
         <p className="text-xs text-[#1B3875]/80 leading-relaxed">
           <span className="font-semibold text-[#1B3875]">ระบบ Ticketing ตามข้อกำหนด TOR:</span>{' '}
-          รองรับการแจ้งเหตุ 3 ช่องทาง (โทรศัพท์ / Web / อีเมล) · ออก Case Number อัตโนมัติทุกครั้ง ·
-          ลูกค้าตรวจสอบสถานะได้ตลอดเวลา · มีกระบวนการยกระดับ L1→L2 Specialist→L3 Manufacturer
+          รองรับ 3 ช่องทาง · Case Number อัตโนมัติ · แจ้งเตือนลูกค้าผ่าน Email / Line · แนบไฟล์ได้ · Escalation ผ่าน Work Log
         </p>
       </div>
 
@@ -228,7 +320,7 @@ export default function ServicePage() {
         <div className="bg-white rounded-xl p-4 border border-red-100 shadow-sm">
           <div className="text-xs text-gray-500 mb-1">Escalated</div>
           <div className="text-2xl font-bold text-red-700">{escalated.length}</div>
-          <div className="text-xs text-gray-400 mt-0.5">L2/L3 Escalation</div>
+          <div className="text-xs text-gray-400 mt-0.5">L1/L2/L3</div>
         </div>
         <div className="bg-white rounded-xl p-4 border border-blue-100 shadow-sm">
           <div className="text-xs text-gray-500 mb-1">Open Tickets</div>
@@ -308,31 +400,26 @@ export default function ServicePage() {
                       <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{tk.no}</span>
                       <Badge variant={severityVariant(tk.severity)}>{tk.severity}</Badge>
                       <Badge variant={slaVariant(tk.slaStatus)}>{tk.slaStatus}</Badge>
-                      {/* Channel badge */}
                       <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${channelBg(tk.channel || 'Web')}`}>
-                        {channelIcon(tk.channel || 'Web')}
-                        {tk.channel || 'Web'}
+                        {channelIcon(tk.channel || 'Web')}{tk.channel || 'Web'}
                       </span>
-                      {/* Escalation badge */}
-                      {(tk.escalationLevel || 0) > 0 && escLevelBadge(tk.escalationLevel || 0)}
+                      {(tk.escalationLevel || 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                          <ArrowUpCircleIcon className="w-3 h-3" />L{tk.escalationLevel}
+                        </span>
+                      )}
                       {tk.slaStatus === 'Breached' && <ExclamationTriangleIcon className="w-4 h-4 text-red-500" />}
                     </div>
                     <h3 className="text-sm font-medium text-gray-800 truncate">{tk.subject}</h3>
-                    <div className="flex items-center gap-3 mt-0.5">
+                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                       <span className="text-xs text-gray-500">{tk.customerName}</span>
                       <span className="text-xs text-gray-400">·</span>
-                      <span className="text-xs text-gray-500">ผู้รับผิดชอบ: {tk.assignedTo}</span>
+                      <span className="text-xs text-gray-500">ผู้รับผิดชอบ: {tk.assignedTo || '-'}</span>
                       {tk.contactName && <>
                         <span className="text-xs text-gray-400">·</span>
                         <span className="text-xs text-gray-400"><UserIcon className="w-3 h-3 inline mr-0.5" />{tk.contactName}</span>
                       </>}
                     </div>
-                    {(tk.escalationLevel || 0) > 0 && tk.escalatedTo && (
-                      <div className="mt-1 text-xs text-orange-600 flex items-center gap-1">
-                        <ArrowUpCircleIcon className="w-3.5 h-3.5" />
-                        ยกระดับไปยัง: {tk.escalatedTo}
-                      </div>
-                    )}
                   </div>
                   <div className="text-right flex-shrink-0">
                     <Badge variant={statusColor(tk.status) as any}>{tk.status}</Badge>
@@ -342,8 +429,8 @@ export default function ServicePage() {
                 </div>
                 {tk.responseDue && (
                   <div className="mt-2 pt-2 border-t border-gray-100 flex gap-4 text-xs text-gray-500">
-                    <span><ClockIcon className="w-3.5 h-3.5 inline mr-1 text-orange-400" />Response due: <span className="font-medium">{tk.responseDue}</span></span>
-                    <span>Resolution due: <span className="font-medium">{tk.resolutionDue}</span></span>
+                    <span><ClockIcon className="w-3.5 h-3.5 inline mr-1 text-orange-400" />Response: <span className="font-medium">{tk.responseDue}</span></span>
+                    <span>Resolution: <span className="font-medium">{tk.resolutionDue}</span></span>
                   </div>
                 )}
               </div>
@@ -392,7 +479,7 @@ export default function ServicePage() {
       {/* ─── Add Ticket Modal ─── */}
       <Modal open={showModal} onClose={() => setShowModal(false)} title="เปิดเคสใหม่ / แจ้งเหตุขัดข้อง" size="lg">
         <div className="space-y-4">
-          {/* Channel Selection */}
+          {/* Channel */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-2">ช่องทางการแจ้งเหตุ*</label>
             <div className="grid grid-cols-3 gap-2">
@@ -437,10 +524,10 @@ export default function ServicePage() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
           </div>
 
-          {/* Contact Info */}
-          <div className="bg-blue-50/50 rounded-lg p-3 space-y-2">
-            <p className="text-xs font-semibold text-blue-800">ข้อมูลผู้ติดต่อ (จะแจ้ง Case Number กลับ)</p>
-            <div className="grid grid-cols-3 gap-2">
+          {/* Contact Info + Notification */}
+          <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 space-y-3">
+            <p className="text-xs font-semibold text-blue-800">ข้อมูลผู้ติดต่อ &amp; การแจ้งเตือนสถานะ</p>
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs text-gray-600 mb-1">ชื่อผู้ติดต่อ</label>
                 <input value={form.contactName} onChange={e => setForm({ ...form, contactName: e.target.value })}
@@ -452,11 +539,62 @@ export default function ServicePage() {
                   className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:outline-none" />
               </div>
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Email</label>
-                <input value={form.contactEmail} onChange={e => setForm({ ...form, contactEmail: e.target.value })}
+                <label className="block text-xs text-gray-600 mb-1">Email (แจ้งเตือนอัตโนมัติ)</label>
+                <input type="email" value={form.contactEmail} onChange={e => setForm({ ...form, contactEmail: e.target.value })}
+                  placeholder="customer@company.com"
+                  className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Line ID (แจ้งเตือนผ่าน Line)</label>
+                <input value={(form as any).contactLineId || ''} onChange={e => setForm({ ...form, contactLineId: e.target.value } as any)}
+                  placeholder="@lineId หรือชื่อ Line"
                   className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:outline-none" />
               </div>
             </div>
+            {/* Notification preference */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">แจ้งเตือนสถานะ Case ผ่าน:</p>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                  <input type="checkbox" checked={form.notifyEmail} onChange={e => setForm({ ...form, notifyEmail: e.target.checked })}
+                    className="w-3.5 h-3.5 accent-[#1B3875]" />
+                  <EnvelopeIcon className="w-3.5 h-3.5 text-blue-500" /> Email
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                  <input type="checkbox" checked={(form as any).notifyLine || false} onChange={e => setForm({ ...form, notifyLine: e.target.checked } as any)}
+                    className="w-3.5 h-3.5 accent-[#1B3875]" />
+                  <span className="text-green-600 font-bold text-xs">LINE</span> Line Notify
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Attach files */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">แนบไฟล์ (รูปภาพ / Log / เอกสาร)</label>
+            <div
+              className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-[#1B3875]/40 transition-colors"
+              onClick={() => ticketFileRef.current?.click()}>
+              <PaperClipIcon className="w-5 h-5 text-gray-400 mx-auto mb-1" />
+              <p className="text-xs text-gray-400">คลิกเพื่อเลือกไฟล์ หรือลาก &amp; วาง</p>
+              <p className="text-xs text-gray-300 mt-0.5">รองรับ .jpg .png .pdf .log .txt (ไม่เกิน 10MB ต่อไฟล์)</p>
+            </div>
+            <input ref={ticketFileRef} type="file" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.log,.txt,.zip,.csv"
+              className="hidden"
+              onChange={e => { if (e.target.files) readFiles(e.target.files, a => setTicketAttachments(prev => [...prev, ...a])) }} />
+            {ticketAttachments.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {ticketAttachments.map((a, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-gray-50 rounded px-2 py-1.5 text-xs">
+                    <PaperClipIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                    <span className="flex-1 truncate text-gray-700">{a.name}</span>
+                    <span className="text-gray-400 flex-shrink-0">{formatBytes(a.size)}</span>
+                    <button onClick={() => setTicketAttachments(prev => prev.filter((_, j) => j !== i))}
+                      className="text-red-400 hover:text-red-600 ml-1"><XMarkIcon className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -465,7 +603,6 @@ export default function ServicePage() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
           </div>
 
-          {/* SLA Preview */}
           {form.severity && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800">
               <span className="font-semibold">SLA Auto-Set:</span>{' '}
@@ -482,9 +619,22 @@ export default function ServicePage() {
       </Modal>
 
       {/* ─── Ticket Detail Modal ─── */}
-      <Modal open={showDetail !== null} onClose={() => { setShowDetail(null) }} title="รายละเอียด Case" size="xl">
+      <Modal open={showDetail !== null} onClose={() => { setShowDetail(null); setShowDeleteConfirm(false) }} title="รายละเอียด Case" size="xl">
         {detailTicket && (
           <div className="space-y-4">
+            {/* Resolve-required banner */}
+            {hasResolvedLog(detailTicket) && (
+              <div className="bg-green-50 border border-green-400 rounded-xl px-4 py-3 flex items-center gap-3">
+                <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-green-800">Work Log บันทึก &ldquo;Resolved&rdquo; แล้ว — กรุณากด Resolve Case เพื่อระบุ Root Cause</p>
+                  <p className="text-xs text-green-600 mt-0.5">ต้องบันทึก Root Cause และวิธีแก้ไขเพื่อปิด Case อย่างสมบูรณ์</p>
+                </div>
+                <Button size="sm" className="!bg-green-600 hover:!bg-green-700 !text-white flex-shrink-0"
+                  onClick={() => setShowResolveModal(true)}>Resolve Case →</Button>
+              </div>
+            )}
+
             {/* Header */}
             <div className="bg-gray-50 rounded-xl p-4">
               <div className="flex items-start justify-between">
@@ -493,9 +643,9 @@ export default function ServicePage() {
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-sm font-mono text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded">{detailTicket.no}</span>
                     <button onClick={() => copyTicketNo(detailTicket.no)}
-                      className="flex items-center gap-1 text-xs text-[#1B3875] hover:text-[#0F2654] transition-colors">
+                      className="flex items-center gap-1 text-xs text-[#1B3875] hover:text-[#0F2654]">
                       <ClipboardDocumentIcon className="w-3.5 h-3.5" />
-                      {copied ? 'คัดลอกแล้ว!' : 'คัดลอก Case No.'}
+                      {copied ? 'คัดลอกแล้ว!' : 'คัดลอก'}
                     </button>
                   </div>
                 </div>
@@ -507,12 +657,36 @@ export default function ServicePage() {
               </div>
             </div>
 
+            {/* Status Progress Bar (read-only, driven by work logs) */}
+            <div className="bg-white border border-gray-100 rounded-xl p-3">
+              <p className="text-xs font-semibold text-gray-500 mb-3">สถานะปัจจุบัน (อัปเดตตาม Work Log)</p>
+              <div className="flex items-center gap-0">
+                {STATUS_PIPELINE.map((s, i) => {
+                  const current = currentStatusStep(detailTicket.status)
+                  const isPast = i < current
+                  const isCurrent = i === current
+                  return (
+                    <div key={s} className="flex items-center flex-1 min-w-0">
+                      <div className="flex flex-col items-center flex-1">
+                        <div className={`w-3 h-3 rounded-full flex-shrink-0 ${isCurrent ? 'bg-[#1B3875] ring-2 ring-[#1B3875]/30' : isPast ? 'bg-[#1B3875]/40' : 'bg-gray-200'}`} />
+                        <span className={`text-center mt-1 leading-tight ${isCurrent ? 'text-[#1B3875] font-semibold' : isPast ? 'text-gray-400' : 'text-gray-300'}`}
+                          style={{ fontSize: '9px', wordBreak: 'break-word', maxWidth: '44px' }}>{s}</span>
+                      </div>
+                      {i < STATUS_PIPELINE.length - 1 && (
+                        <div className={`h-0.5 flex-1 mx-0.5 ${i < current ? 'bg-[#1B3875]/40' : 'bg-gray-200'}`} />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* Info Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
               {[
                 ['ลูกค้า', detailTicket.customerName],
-                ['ผู้รับผิดชอบ', detailTicket.assignedTo],
-                ['ช่องทางแจ้งเหตุ', detailTicket.channel || '-'],
+                ['ผู้รับผิดชอบ', detailTicket.assignedTo || '-'],
+                ['ช่องทาง', detailTicket.channel || '-'],
                 ['Response Due', detailTicket.responseDue || '-'],
                 ['Resolution Due', detailTicket.resolutionDue || '-'],
                 ['สร้างเมื่อ', new Date(detailTicket.createdAt).toLocaleString('th-TH')],
@@ -524,14 +698,25 @@ export default function ServicePage() {
               ))}
             </div>
 
-            {/* Contact Info */}
-            {(detailTicket.contactName || detailTicket.contactPhone || detailTicket.contactEmail) && (
+            {/* Contact + Notification info */}
+            {(detailTicket.contactName || detailTicket.contactPhone || detailTicket.contactEmail || (detailTicket as any).contactLineId) && (
               <div className="bg-blue-50 rounded-lg p-3">
-                <p className="text-xs font-semibold text-blue-800 mb-2">ข้อมูลผู้ติดต่อ</p>
+                <p className="text-xs font-semibold text-blue-800 mb-2">ข้อมูลผู้ติดต่อ &amp; การแจ้งเตือน</p>
                 <div className="flex flex-wrap gap-4 text-xs text-blue-700">
                   {detailTicket.contactName && <span><UserIcon className="w-3.5 h-3.5 inline mr-1" />{detailTicket.contactName}</span>}
                   {detailTicket.contactPhone && <span><PhoneIcon className="w-3.5 h-3.5 inline mr-1" />{detailTicket.contactPhone}</span>}
-                  {detailTicket.contactEmail && <span><EnvelopeIcon className="w-3.5 h-3.5 inline mr-1" />{detailTicket.contactEmail}</span>}
+                  {detailTicket.contactEmail && (
+                    <span className="flex items-center gap-1">
+                      <EnvelopeIcon className="w-3.5 h-3.5" />{detailTicket.contactEmail}
+                      <span className="bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded text-xs">แจ้งเตือน Email</span>
+                    </span>
+                  )}
+                  {(detailTicket as any).contactLineId && (
+                    <span className="flex items-center gap-1">
+                      <span className="font-bold text-green-600 text-xs">LINE</span> {(detailTicket as any).contactLineId}
+                      <span className="bg-green-100 text-green-600 px-1.5 py-0.5 rounded text-xs">Line Notify</span>
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -541,19 +726,16 @@ export default function ServicePage() {
               <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">{detailTicket.description}</div>
             )}
 
-            {/* Escalation Info */}
+            {/* Escalation info (from logs) */}
             {(detailTicket.escalationLevel || 0) > 0 && (
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-1">
                   <ArrowUpCircleIcon className="w-4 h-4 text-orange-600" />
-                  <span className="text-sm font-semibold text-orange-800">การยกระดับปัญหา</span>
-                  {escLevelBadge(detailTicket.escalationLevel || 0)}
+                  <span className="text-sm font-semibold text-orange-800">ยกระดับปัญหา — {ESC_LEVELS[detailTicket.escalationLevel || 0]}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div><span className="text-orange-600">ยกระดับไปยัง:</span> <span className="font-medium">{detailTicket.escalatedTo}</span></div>
-                  <div><span className="text-orange-600">เวลา:</span> <span className="font-medium">{detailTicket.escalatedAt ? new Date(detailTicket.escalatedAt).toLocaleString('th-TH') : '-'}</span></div>
-                  {detailTicket.escalationReason && <div className="col-span-2"><span className="text-orange-600">เหตุผล:</span> <span>{detailTicket.escalationReason}</span></div>}
-                </div>
+                {detailTicket.escalatedTo && (
+                  <div className="text-xs text-orange-700">ส่งต่อไปยัง: <span className="font-medium">{detailTicket.escalatedTo}</span></div>
+                )}
               </div>
             )}
 
@@ -568,9 +750,9 @@ export default function ServicePage() {
                 <Button size="sm" variant="outline" icon={<PlusIcon className="w-3.5 h-3.5" />}
                   onClick={() => setShowLogModal(true)}>เพิ่ม Log</Button>
               </div>
-              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                 {(detailTicket.workLogs || []).map((log: WorkLog, i: number) => (
-                  <div key={log.id} className="flex gap-3">
+                  <div key={log.id} className="flex gap-3 group">
                     <div className="flex flex-col items-center">
                       <div className="w-2 h-2 rounded-full bg-[#1B3875] mt-1.5 flex-shrink-0" />
                       {i < (detailTicket.workLogs || []).length - 1 && <div className="w-px flex-1 bg-gray-200 my-1" />}
@@ -580,6 +762,26 @@ export default function ServicePage() {
                         <span className={`text-xs px-2 py-0.5 rounded border font-medium ${timelineActionColor(log.action)}`}>{log.action}</span>
                         <span className="text-xs text-gray-400">{new Date(log.time).toLocaleString('th-TH')}</span>
                         <span className="text-xs text-gray-500">— {log.user}</span>
+                        {/* Edit/Delete buttons (hidden until hover) */}
+                        {deleteLogId === log.id ? (
+                          <span className="flex gap-1 ml-auto">
+                            <button onClick={() => handleDeleteLog(log.id)}
+                              className="text-xs text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded hover:bg-red-100">ยืนยันลบ</button>
+                            <button onClick={() => setDeleteLogId(null)}
+                              className="text-xs text-gray-500 px-2 py-0.5 rounded hover:bg-gray-100">ยกเลิก</button>
+                          </span>
+                        ) : (
+                          <span className="flex gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setEditingLog(log); setEditLogForm({ action: log.action, note: log.note }) }}
+                              className="text-gray-400 hover:text-[#1B3875] p-0.5 rounded hover:bg-gray-100">
+                              <PencilSquareIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => setDeleteLogId(log.id)}
+                              className="text-gray-400 hover:text-red-500 p-0.5 rounded hover:bg-red-50">
+                              <TrashIcon className="w-3.5 h-3.5" />
+                            </button>
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-600 mt-0.5">{log.note}</p>
                     </div>
@@ -590,6 +792,23 @@ export default function ServicePage() {
                 )}
               </div>
             </div>
+
+            {/* Edit Log inline */}
+            {editingLog && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
+                <p className="text-xs font-semibold text-yellow-800">แก้ไข Work Log</p>
+                <select value={editLogForm.action} onChange={e => setEditLogForm({ ...editLogForm, action: e.target.value })}
+                  className="w-full px-2.5 py-1.5 border border-yellow-200 rounded text-sm focus:outline-none">
+                  {LOG_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+                <textarea rows={2} value={editLogForm.note} onChange={e => setEditLogForm({ ...editLogForm, note: e.target.value })}
+                  className="w-full px-2.5 py-1.5 border border-yellow-200 rounded text-sm focus:outline-none resize-none" />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleEditLog}>บันทึก</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingLog(null)}>ยกเลิก</Button>
+                </div>
+              </div>
+            )}
 
             {/* Resolution */}
             {(detailTicket.rootCause || detailTicket.resolution) && (
@@ -614,35 +833,16 @@ export default function ServicePage() {
                   if (assignForm) {
                     const now = new Date().toISOString()
                     updateTicket(detailTicket.id, { assignedTo: assignForm, status: 'Assigned' as any })
-                    addWorkLog(detailTicket.id, { id: Date.now(), time: now, user: 'Service Team', action: 'Assigned', note: `มอบหมายให้ ${assignForm}` })
+                    addWorkLog(detailTicket.id, { id: Date.now(), time: now, user: 'Service Team', action: 'Assigned', note: `มอบหมายให้ ${assignForm}` } as any)
                     setAssignForm('')
                   }
                 }}>บันทึก</Button>
               </div>
 
-              {/* Status quick-update (excluding Resolved — use dedicated button) */}
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-2 block">อัปเดตสถานะ</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {TICKET_STATUSES.filter(s => s !== 'Resolved').map(s => (
-                    <button key={s} onClick={() => {
-                      const now = new Date().toISOString()
-                      updateTicket(detailTicket.id, { status: s as any, ...(s === 'Closed' ? { closedAt: now } : {}) })
-                      addWorkLog(detailTicket.id, { id: Date.now(), time: now, user: 'Service Team', action: s, note: `อัปเดตสถานะเป็น ${s}` })
-                    }}
-                      className={`text-xs px-3 py-1.5 rounded-lg transition-colors border ${detailTicket.status === s ? 'bg-[#1B3875] text-white border-[#1B3875]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#1B3875]/40'}`}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action buttons row */}
-              <div className="flex items-center gap-2 flex-wrap pt-1">
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button size="sm" icon={<ChatBubbleLeftRightIcon className="w-4 h-4" />}
                   onClick={() => setShowLogModal(true)}>เพิ่ม Work Log</Button>
-                <Button variant="outline" size="sm" icon={<ArrowUpCircleIcon className="w-4 h-4" />}
-                  onClick={() => setShowEscModal(true)}>Escalate</Button>
                 {!['Resolved', 'Closed'].includes(detailTicket.status) && (
                   <Button size="sm"
                     className="!bg-green-600 hover:!bg-green-700 !text-white"
@@ -657,7 +857,6 @@ export default function ServicePage() {
                 </button>
               </div>
 
-              {/* Delete confirm inline */}
               {showDeleteConfirm && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs">
                   <p className="text-red-700 font-semibold mb-2">ยืนยันการลบ Case {detailTicket.no}?</p>
@@ -674,49 +873,90 @@ export default function ServicePage() {
         )}
       </Modal>
 
-      {/* ─── Escalation Modal ─── */}
-      <Modal open={showEscModal} onClose={() => setShowEscModal(false)} title="ยกระดับปัญหา (Escalation)" size="md">
-        <div className="space-y-4">
-          <div className="bg-orange-50 rounded-lg p-3 text-xs text-orange-700">
-            <p className="font-semibold mb-1">กระบวนการยกระดับปัญหาตาม TOR:</p>
-            <p>L1 → Internal Support → L2 Specialist/3rd Party → L3 Manufacturer/Vendor</p>
-          </div>
+      {/* ─── Work Log Modal ─── */}
+      <Modal open={showLogModal} onClose={() => setShowLogModal(false)} title="เพิ่ม Work Log / บันทึกความคืบหน้า" size="md">
+        <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">ระดับการยกระดับ*</label>
-            <select value={escForm.level} onChange={e => setEscForm({ ...escForm, level: +e.target.value })}
+            <label className="block text-xs font-medium text-gray-600 mb-1">Action / ประเภทกิจกรรม*</label>
+            <select value={logForm.action} onChange={e => setLogForm({ ...logForm, action: e.target.value })}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
-              {ESC_LEVELS.map((l, i) => i > 0 && <option key={i} value={i}>{l}</option>)}
+              {LOG_ACTIONS.map(a => (
+                <option key={a} value={a}>{a}</option>
+              ))}
             </select>
           </div>
+
+          {/* Show escalate-to field when escalation action selected */}
+          {isEscalateAction && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-semibold text-orange-700 flex items-center gap-1">
+                <ArrowUpCircleIcon className="w-3.5 h-3.5" />ข้อมูลการยกระดับ
+              </p>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">ยกระดับไปยัง (ชื่อบุคคล/ทีม/บริษัท)*</label>
+                <input value={logForm.escalateTo} onChange={e => setLogForm({ ...logForm, escalateTo: e.target.value })}
+                  placeholder="เช่น HPE TAC, True Business NOC, นาย..."
+                  className="w-full px-2.5 py-1.5 border border-orange-200 rounded text-sm focus:outline-none" />
+              </div>
+            </div>
+          )}
+
+          {/* Resolved action info */}
+          {logForm.action === 'Resolved' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700">
+              เมื่อบันทึก &ldquo;Resolved&rdquo; ระบบจะเปิด popup ให้กรอก Root Cause และวิธีแก้ไข เพื่อปิด Case อย่างสมบูรณ์
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">ยกระดับไปยัง (ชื่อผู้รับ/บริษัท)*</label>
-            <input value={escForm.escalatedTo} onChange={e => setEscForm({ ...escForm, escalatedTo: e.target.value })}
-              placeholder="เช่น HPE TAC, True Business NOC, Cisco SMARTnet..."
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">เหตุผลการยกระดับ*</label>
-            <textarea rows={3} value={escForm.reason} onChange={e => setEscForm({ ...escForm, reason: e.target.value })}
-              placeholder="อธิบายเหตุผลที่ต้องยกระดับ..."
+            <label className="block text-xs font-medium text-gray-600 mb-1">บันทึกรายละเอียด*</label>
+            <textarea rows={4} value={logForm.note} onChange={e => setLogForm({ ...logForm, note: e.target.value })}
+              placeholder="อธิบายขั้นตอนที่ดำเนินการ ผลลัพธ์ ขั้นตอนถัดไป..."
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
+          </div>
+
+          {/* Attach files in log */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">แนบไฟล์ (รูปหน้าจอ / Log file)</label>
+            <div
+              className="border-2 border-dashed border-gray-200 rounded-lg p-2.5 text-center cursor-pointer hover:border-[#1B3875]/40 transition-colors"
+              onClick={() => logFileRef.current?.click()}>
+              <p className="text-xs text-gray-400">คลิกเพื่อเลือกไฟล์</p>
+            </div>
+            <input ref={logFileRef} type="file" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.log,.txt,.zip,.csv"
+              className="hidden"
+              onChange={e => { if (e.target.files) readFiles(e.target.files, a => setLogAttachments(prev => [...prev, ...a])) }} />
+            {logAttachments.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {logAttachments.map((a, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-gray-50 rounded px-2 py-1 text-xs">
+                    <PaperClipIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                    <span className="flex-1 truncate text-gray-700">{a.name}</span>
+                    <span className="text-gray-400">{formatBytes(a.size)}</span>
+                    <button onClick={() => setLogAttachments(prev => prev.filter((_, j) => j !== i))}
+                      className="text-red-400 hover:text-red-600"><XMarkIcon className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-          <Button variant="ghost" onClick={() => setShowEscModal(false)}>ยกเลิก</Button>
-          <Button onClick={handleEscalate} disabled={!escForm.escalatedTo || !escForm.reason}>ยืนยัน Escalate</Button>
+          <Button variant="ghost" onClick={() => setShowLogModal(false)}>ยกเลิก</Button>
+          <Button onClick={handleAddLog} disabled={!logForm.note || (isEscalateAction && !logForm.escalateTo)}>บันทึก Log</Button>
         </div>
       </Modal>
 
       {/* ─── Resolve Case Modal ─── */}
-      <Modal open={showResolveModal} onClose={() => setShowResolveModal(false)} title="✅ ปิด / Resolve Case" size="md">
+      <Modal open={showResolveModal} onClose={() => setShowResolveModal(false)} title="✅ Resolve Case — ระบุ Root Cause" size="md">
         <div className="space-y-4">
           <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 text-xs text-green-700">
-            การ Resolve case ต้องบันทึก Root Cause และวิธีแก้ไขทุกครั้ง เพื่อใช้อ้างอิงและปรับปรุงกระบวนการ
+            กรุณาระบุ Root Cause และวิธีแก้ไขทุกครั้ง เพื่อใช้อ้างอิงและปรับปรุงกระบวนการในอนาคต
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Root Cause (สาเหตุที่แท้จริง) *</label>
             <textarea rows={2} value={resolveForm.rootCause} onChange={e => setResolveForm({ ...resolveForm, rootCause: e.target.value })}
-              placeholder="เช่น Hardware failure — HDD bad sector, Configuration error — VLAN misconfigured..."
+              placeholder="เช่น Hardware failure — HDD bad sector, Config error — VLAN misconfigured..."
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
           </div>
           <div>
@@ -738,34 +978,8 @@ export default function ServicePage() {
             className="!bg-green-600 hover:!bg-green-700"
             onClick={handleResolve}
             disabled={!resolveForm.rootCause || !resolveForm.resolution}>
-            ยืนยัน Resolve + บันทึก
+            ยืนยัน Resolve + ปิด Case
           </Button>
-        </div>
-      </Modal>
-
-      {/* ─── Work Log Modal ─── */}
-      <Modal open={showLogModal} onClose={() => setShowLogModal(false)} title="เพิ่ม Work Log / บันทึกความคืบหน้า" size="md">
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Action / ประเภทกิจกรรม*</label>
-            <select value={logForm.action} onChange={e => setLogForm({ ...logForm, action: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
-              {['Investigating', 'On-site Visit', 'Remote Support', 'In Progress', 'Parts Ordered',
-                'Pending Customer', 'Pending Vendor', 'Resolved', 'Closed', 'Other'].map(a => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">บันทึกรายละเอียด*</label>
-            <textarea rows={4} value={logForm.note} onChange={e => setLogForm({ ...logForm, note: e.target.value })}
-              placeholder="อธิบายขั้นตอนที่ดำเนินการ ผลลัพธ์ ขั้นตอนถัดไป..."
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
-          </div>
-        </div>
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-          <Button variant="ghost" onClick={() => setShowLogModal(false)}>ยกเลิก</Button>
-          <Button onClick={handleAddLog} disabled={!logForm.note}>บันทึก Log</Button>
         </div>
       </Modal>
     </div>

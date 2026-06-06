@@ -2,7 +2,9 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useAppStore } from '@/store'
+import { supabase, hasSupabase } from '@/lib/supabase'
 import type { WorkLog } from '@/lib/demo-data'
+import type { CustomerPortalAccount } from '@/store'
 import {
   PhoneIcon, EnvelopeIcon, GlobeAltIcon, PlusIcon, ArrowRightOnRectangleIcon,
   ClipboardDocumentIcon, CheckCircleIcon, ClockIcon, ArrowUpCircleIcon,
@@ -30,7 +32,9 @@ type CustomerSession = {
 }
 
 export default function CustomerPortalPage() {
-  const { tickets, addTicket, customerPortalAccounts } = useAppStore()
+  const { tickets: localTickets, addTicket, customerPortalAccounts } = useAppStore()
+  // liveTickets: loaded from Supabase for cross-device sync; falls back to local store
+  const [liveTickets, setLiveTickets] = useState(localTickets)
   const [session, setSession] = useState<CustomerSession | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -49,6 +53,7 @@ export default function CustomerPortalPage() {
     channel: 'Web', contactName: '', contactPhone: '', contactEmail: '',
   })
 
+  // Restore session from sessionStorage on mount
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem('neft_customer_session')
@@ -56,24 +61,72 @@ export default function CustomerPortalPage() {
     } catch {}
   }, [])
 
+  // Load tickets from Supabase whenever session changes (cross-device sync)
+  useEffect(() => {
+    if (!session) return
+    const load = async () => {
+      if (hasSupabase && supabase) {
+        try {
+          const { data } = await supabase
+            .from('app_data')
+            .select('value')
+            .eq('key', 'tickets')
+            .single()
+          if (data?.value && Array.isArray(data.value)) {
+            setLiveTickets(data.value)
+            return
+          }
+        } catch {}
+      }
+      // Fallback to Zustand store (localStorage)
+      setLiveTickets(localTickets)
+    }
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoginLoading(true)
     setLoginErr('')
-    await new Promise(r => setTimeout(r, 500))
-    // Read directly from localStorage to avoid Zustand hydration timing issues
-    let accounts = customerPortalAccounts
-    try {
-      const raw = localStorage.getItem('neft-store')
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        const stored = parsed?.state?.customerPortalAccounts
-        if (Array.isArray(stored) && stored.length > 0) accounts = stored
+
+    const emailNorm = email.trim().toLowerCase()
+    let cred: CustomerPortalAccount | undefined
+
+    // 1) Try Supabase first (real-time, cross-device)
+    if (hasSupabase && supabase) {
+      try {
+        const { data } = await supabase
+          .from('app_data')
+          .select('value')
+          .eq('key', 'customerPortalAccounts')
+          .single()
+        if (data?.value && Array.isArray(data.value)) {
+          cred = (data.value as CustomerPortalAccount[]).find(
+            c => c.email === emailNorm && c.password === password && c.active
+          )
+        }
+      } catch {
+        // fall through to local fallback
       }
-    } catch {}
-    const cred = accounts.find(c =>
-      c.email === email.trim().toLowerCase() && c.password === password && c.active
-    )
+    }
+
+    // 2) Fallback: localStorage (offline / Supabase not configured)
+    if (!cred) {
+      let accounts: CustomerPortalAccount[] = customerPortalAccounts
+      try {
+        const raw = localStorage.getItem('neft-store')
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          const stored = parsed?.state?.customerPortalAccounts
+          if (Array.isArray(stored) && stored.length > 0) accounts = stored
+        }
+      } catch {}
+      cred = accounts.find(c =>
+        c.email === emailNorm && c.password === password && c.active
+      )
+    }
+
     if (!cred) {
       setLoginErr('อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาติดต่อ NEFT เพื่อขอรับ credentials')
       setLoginLoading(false)
@@ -113,13 +166,13 @@ export default function CustomerPortalPage() {
         )
     : []
 
-  const allMyTickets = session ? tickets.filter(t => t.customerId === session.customerId) : []
+  const allMyTickets = session ? liveTickets.filter(t => t.customerId === session.customerId) : []
   const openCount = allMyTickets.filter(t => !['Resolved', 'Closed'].includes(t.status)).length
   const resolvedCount = allMyTickets.filter(t => ['Resolved', 'Closed'].includes(t.status)).length
 
   const nextTicketNo = () => {
     const year = new Date().getFullYear()
-    const maxNo = tickets.reduce((max, tk) => {
+    const maxNo = liveTickets.reduce((max, tk) => {
       const m = tk.no.match(/TK-\d{4}-(\d+)/)
       return m ? Math.max(max, parseInt(m[1])) : max
     }, 90)
@@ -134,7 +187,7 @@ export default function CustomerPortalPage() {
     const slaHours: Record<string, number> = { Critical: 4, High: 8, Medium: 24, Low: 48 }
     const respDue = new Date(Date.now() + slaHours[form.severity] * 3600000)
     const resDue = new Date(Date.now() + slaHours[form.severity] * 3 * 3600000)
-    addTicket({
+    const newTicket = {
       id: Date.now(), no,
       customerId: session.customerId, customerName: session.companyName,
       subject: form.subject, description: form.description, severity: form.severity as any,
@@ -153,7 +206,10 @@ export default function CustomerPortalPage() {
         id: 1, time: now, user: 'ระบบ (Customer Portal)', action: 'Ticket Opened',
         note: `รับแจ้งปัญหาผ่าน Customer Portal โดย ${session.contactName} (${session.companyName}) — ออก Case ${no}`
       }]
-    })
+    }
+    addTicket(newTicket)
+    // Optimistically update liveTickets so new ticket appears immediately
+    setLiveTickets(prev => [newTicket as any, ...prev])
     setSubmitted(no)
     setShowNewTicket(false)
     setForm({ subject: '', description: '', severity: 'Medium', channel: 'Web', contactName: '', contactPhone: '', contactEmail: '' })
@@ -189,7 +245,7 @@ export default function CustomerPortalPage() {
     return 'bg-gray-100 text-gray-700 border-gray-200'
   }
 
-  const selectedTk = selectedTicket !== null ? tickets.find(t => t.id === selectedTicket) : null
+  const selectedTk = selectedTicket !== null ? liveTickets.find(t => t.id === selectedTicket) : null
 
   // ─── LOGIN PAGE ────────────────────────────────────────────────────────────
   if (!session) {

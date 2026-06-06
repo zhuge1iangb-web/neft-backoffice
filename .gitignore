@@ -37,3 +37,20 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Excel/Office files (work documents — not source code)
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+
+# Deployment scripts (contain machine-specific paths)
+deploy.sh
+
+# Duplicate translation files
+"src/lib/translations 2.ts"
+src/lib/translations\ 2.ts
+
+# macOS
+.DS_Store
+**/.DS_Store

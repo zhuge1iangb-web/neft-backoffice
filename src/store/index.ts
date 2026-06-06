@@ -145,7 +145,7 @@ export const useAppStore = create<AppState>()(
           return
         }
         try {
-          const keys = ['customers','opportunities','projects','milestones','invoices','tickets','contracts','notifications','vendors','quotations','purchaseOrders','inventory','projectTypes','paymentTerms','deliveryPeriods']
+          const keys = ['customers','opportunities','projects','milestones','invoices','tickets','contracts','notifications','vendors','quotations','purchaseOrders','inventory','projectTypes','paymentTerms','deliveryPeriods','customerPortalAccounts']
           const { data, error } = await supabase
             .from('app_data')
             .select('key, value')
@@ -153,41 +153,43 @@ export const useAppStore = create<AppState>()(
           if (error) throw error
           if (!data || data.length === 0) {
             await supabase.from('app_data').insert([
-              { key: 'customers',     value: demoCustomers },
-              { key: 'opportunities', value: demoOpportunities },
-              { key: 'projects',      value: demoProjects },
-              { key: 'milestones',    value: demoMilestones },
-              { key: 'invoices',      value: demoInvoices },
-              { key: 'tickets',       value: demoTickets },
-              { key: 'contracts',     value: demoContracts },
-              { key: 'notifications', value: demoNotifications },
-              { key: 'vendors',       value: demoVendors },
-              { key: 'quotations',    value: demoQuotations },
-              { key: 'purchaseOrders',value: demoPurchaseOrders },
-              { key: 'inventory',     value: demoInventory },
-              { key: 'projectTypes',  value: demoProjectTypes },
-              { key: 'paymentTerms',  value: demoPaymentTerms },
-              { key: 'deliveryPeriods',value: demoDeliveryPeriods },
+              { key: 'customers',             value: demoCustomers },
+              { key: 'opportunities',         value: demoOpportunities },
+              { key: 'projects',              value: demoProjects },
+              { key: 'milestones',            value: demoMilestones },
+              { key: 'invoices',              value: demoInvoices },
+              { key: 'tickets',              value: demoTickets },
+              { key: 'contracts',             value: demoContracts },
+              { key: 'notifications',         value: demoNotifications },
+              { key: 'vendors',              value: demoVendors },
+              { key: 'quotations',            value: demoQuotations },
+              { key: 'purchaseOrders',        value: demoPurchaseOrders },
+              { key: 'inventory',             value: demoInventory },
+              { key: 'projectTypes',          value: demoProjectTypes },
+              { key: 'paymentTerms',          value: demoPaymentTerms },
+              { key: 'deliveryPeriods',       value: demoDeliveryPeriods },
+              { key: 'customerPortalAccounts', value: INITIAL_CUSTOMER_PORTAL_ACCOUNTS },
             ])
           } else {
             const m: Record<string, any> = {}
             data.forEach(r => { m[r.key] = r.value })
             set({
-              customers:     m.customers     ?? demoCustomers,
-              opportunities: m.opportunities ?? demoOpportunities,
-              projects:      m.projects      ?? demoProjects,
-              milestones:    m.milestones    ?? demoMilestones,
-              invoices:      m.invoices      ?? demoInvoices,
-              tickets:       m.tickets       ?? demoTickets,
-              contracts:     m.contracts     ?? demoContracts,
-              notifications: m.notifications ?? demoNotifications,
-              vendors:       m.vendors       ?? demoVendors,
-              quotations:    m.quotations    ?? demoQuotations,
-              purchaseOrders:m.purchaseOrders ?? demoPurchaseOrders,
-              inventory:     m.inventory     ?? demoInventory,
-              projectTypes:  m.projectTypes  ?? demoProjectTypes,
-              paymentTerms:  m.paymentTerms  ?? demoPaymentTerms,
-              deliveryPeriods:m.deliveryPeriods ?? demoDeliveryPeriods,
+              customers:              m.customers              ?? demoCustomers,
+              opportunities:          m.opportunities          ?? demoOpportunities,
+              projects:               m.projects               ?? demoProjects,
+              milestones:             m.milestones             ?? demoMilestones,
+              invoices:               m.invoices               ?? demoInvoices,
+              tickets:                m.tickets                ?? demoTickets,
+              contracts:              m.contracts              ?? demoContracts,
+              notifications:          m.notifications          ?? demoNotifications,
+              vendors:                m.vendors                ?? demoVendors,
+              quotations:             m.quotations             ?? demoQuotations,
+              purchaseOrders:         m.purchaseOrders         ?? demoPurchaseOrders,
+              inventory:              m.inventory              ?? demoInventory,
+              projectTypes:           m.projectTypes           ?? demoProjectTypes,
+              paymentTerms:           m.paymentTerms           ?? demoPaymentTerms,
+              deliveryPeriods:        m.deliveryPeriods         ?? demoDeliveryPeriods,
+              customerPortalAccounts: m.customerPortalAccounts ?? INITIAL_CUSTOMER_PORTAL_ACCOUNTS,
             })
           }
         } catch (e) {
@@ -498,20 +500,23 @@ export const useAppStore = create<AppState>()(
         const users = get().users.filter(u => u.id !== id)
         set({ users })
       },
-      // Customer Portal Accounts
+      // Customer Portal Accounts — synced to Supabase for cross-device access
       addCustomerPortalAccount: (account) => {
         const customerPortalAccounts = [...get().customerPortalAccounts, account]
         set({ customerPortalAccounts })
+        syncToSupabase('customerPortalAccounts', customerPortalAccounts)
       },
       updateCustomerPortalAccount: (id, data) => {
         const customerPortalAccounts = get().customerPortalAccounts.map(a =>
           a.id === id ? { ...a, ...data } : a
         )
         set({ customerPortalAccounts })
+        syncToSupabase('customerPortalAccounts', customerPortalAccounts)
       },
       deleteCustomerPortalAccount: (id) => {
         const customerPortalAccounts = get().customerPortalAccounts.filter(a => a.id !== id)
         set({ customerPortalAccounts })
+        syncToSupabase('customerPortalAccounts', customerPortalAccounts)
       },
     }),
     {

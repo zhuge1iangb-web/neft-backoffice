@@ -8,7 +8,7 @@ import {
   HomeIcon, BriefcaseIcon, FolderOpenIcon, CurrencyDollarIcon,
   WrenchScrewdriverIcon, BellIcon, UsersIcon, CircleStackIcon,
   ArrowRightOnRectangleIcon, BuildingOffice2Icon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
-  ShoppingCartIcon, ArchiveBoxIcon
+  ShoppingCartIcon, ArchiveBoxIcon, ChartBarIcon
 } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 import Image from 'next/image'
@@ -21,6 +21,7 @@ const navItems = (t: typeof translations.th) => [
   { href: '/service',        label: t.nav.service,        icon: WrenchScrewdriverIcon },
   { href: '/purchasing',     label: t.nav.purchasing,     icon: ShoppingCartIcon },
   { href: '/inventory',      label: t.nav.inventory,      icon: ArchiveBoxIcon },
+  { href: '/reports',        label: t.nav.reports,        icon: ChartBarIcon },
   { href: '/notifications',  label: t.nav.notifications,  icon: BellIcon, badge: true },
   { href: '/users',          label: t.nav.users,          icon: UsersIcon },
   { href: '/master',         label: t.nav.master,         icon: CircleStackIcon },
@@ -41,32 +42,33 @@ export default function Sidebar() {
       'flex flex-col h-screen bg-[#0F2654] text-white transition-all duration-300 flex-shrink-0',
       collapsed ? 'w-16' : 'w-60'
     )}>
-      {/* Logo — white pill container so logo renders naturally on navy sidebar */}
-      <div className="flex items-center justify-between px-3 py-3 border-b border-white/10">
+      {/* Logo bar — white background so logo sits flush, no pill needed */}
+      <div className={clsx(
+        'flex items-center justify-between px-3 py-3 bg-white border-b border-gray-100 flex-shrink-0',
+        collapsed ? 'px-2' : 'px-4'
+      )}>
         {!collapsed ? (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="bg-white rounded-xl px-3 py-1.5 shadow-sm">
-              <Image
-                src="/neft-logo.png"
-                alt="NEFT Solution"
-                width={108} height={36}
-                className="h-7 w-auto object-contain"
-                priority
-              />
-            </div>
+          <div className="flex items-center flex-1 min-w-0">
+            <Image
+              src="/neft-logo.png"
+              alt="NEFT Solution"
+              width={108} height={36}
+              className="h-8 w-auto object-contain"
+              priority
+            />
           </div>
         ) : (
-          <div className="bg-white rounded-xl p-1.5 mx-auto shadow-sm flex items-center justify-center w-9 h-9">
+          <div className="flex items-center justify-center w-full">
             <Image
               src="/neft-logo.png"
               alt="NEFT"
-              width={28} height={28}
-              className="w-5 h-5 object-contain"
+              width={32} height={32}
+              className="w-7 h-7 object-contain"
               priority
             />
           </div>
         )}
-        <button onClick={() => setCollapsed(!collapsed)} className="text-white/40 hover:text-white p-1 rounded flex-shrink-0 ml-1">
+        <button onClick={() => setCollapsed(!collapsed)} className="text-gray-400 hover:text-[#0F2654] p-1 rounded flex-shrink-0 ml-1 transition-colors">
           {collapsed ? <ChevronDoubleRightIcon className="w-3.5 h-3.5" /> : <ChevronDoubleLeftIcon className="w-3.5 h-3.5" />}
         </button>
       </div>

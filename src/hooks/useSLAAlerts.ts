@@ -47,8 +47,8 @@ export function useSLAAlerts() {
       const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' })
 
       const title = isBreached
-        ? `SLA Breached — ${ticket.title}`
-        : `SLA ใกล้หมดเวลา — ${ticket.title}`
+        ? `SLA Breached — ${ticket.subject}`
+        : `SLA ใกล้หมดเวลา — ${ticket.subject}`
 
       const message = isBreached
         ? `Ticket #${ticket.id} (${ticket.severity}) เกิน SLA แล้ว — ดำเนินการแก้ไขโดยด่วน`

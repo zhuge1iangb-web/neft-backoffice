@@ -87,7 +87,7 @@ export default function ReportsPage() {
 
   const exportServiceReport = () => {
     exportCSV(tickets.map(t => ({
-      ID: t.id, หัวข้อ: t.title, สถานะ: t.status, ความรุนแรง: t.severity,
+      ID: t.id, หัวข้อ: t.subject, สถานะ: t.status, ความรุนแรง: t.severity,
       SLA: t.slaStatus, ลูกค้า: customers.find(c => c.id === t.customerId)?.name || '',
       ช่องทาง: t.channel, วันที่เปิด: t.createdAt, กำหนดแก้ไข: t.resolutionDue || '',
     })), 'service_report_' + new Date().toISOString().split('T')[0])
@@ -241,7 +241,7 @@ export default function ReportsPage() {
                   {tickets.map(ticket => (
                     <tr key={ticket.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                       <td className="px-3 py-2.5 text-xs font-mono text-gray-500">#{ticket.id}</td>
-                      <td className="px-3 py-2.5 text-xs text-gray-700 max-w-[200px] truncate">{ticket.title}</td>
+                      <td className="px-3 py-2.5 text-xs text-gray-700 max-w-[200px] truncate">{ticket.subject}</td>
                       <td className="px-3 py-2.5 text-xs text-gray-500">{customers.find(c => c.id === ticket.customerId)?.name || '—'}</td>
                       <td className="px-3 py-2.5 text-xs text-gray-500">{ticket.channel}</td>
                       <td className="px-3 py-2.5">
@@ -348,7 +348,7 @@ export default function ReportsPage() {
                   {tickets.filter(t => t.slaStatus === 'Breached' || t.slaStatus === 'At Risk').map(ticket => (
                     <tr key={ticket.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                       <td className="px-4 py-3 text-xs font-mono text-gray-400">#{ticket.id}</td>
-                      <td className="px-4 py-3 text-xs text-gray-700 font-medium max-w-[200px] truncate">{ticket.title}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700 font-medium max-w-[200px] truncate">{ticket.subject}</td>
                       <td className="px-4 py-3 text-xs text-gray-500">{customers.find(c => c.id === ticket.customerId)?.name || '—'}</td>
                       <td className="px-4 py-3"><Badge variant={ticket.severity === 'Critical' ? 'error' : 'warning'} size="sm">{ticket.severity}</Badge></td>
                       <td className="px-4 py-3"><Badge variant={ticket.slaStatus === 'Breached' ? 'error' : 'warning'} size="sm">{ticket.slaStatus}</Badge></td>

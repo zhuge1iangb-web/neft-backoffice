@@ -152,7 +152,7 @@ export default function CustomerPortalPage() {
   }
 
   const myTickets = session
-    ? tickets
+    ? liveTickets
         .filter(t => t.customerId === session.customerId)
         .filter(t => {
           if (filterStatus === 'open') return !['Resolved', 'Closed'].includes(t.status)

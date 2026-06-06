@@ -88,6 +88,11 @@ interface AppState {
   // Notifications
   markNotificationRead: (id: number) => void
   markAllNotificationsRead: () => void
+  addNotification: (n: typeof demoNotifications[number]) => void
+  // Users (Staff)
+  addUser: (user: typeof demoUsers[number]) => void
+  updateUser: (id: number, data: Partial<typeof demoUsers[number]>) => void
+  deleteUser: (id: number) => void
 }
 
 async function syncToSupabase(key: string, value: any) {
@@ -453,6 +458,26 @@ export const useAppStore = create<AppState>()(
         set({ notifications })
         syncToSupabase('notifications', notifications)
       },
+      addNotification: (n) => {
+        const notifications = [n, ...get().notifications]
+        set({ notifications })
+        syncToSupabase('notifications', notifications)
+      },
+      // Users (Staff)
+      addUser: (user) => {
+        const users = [...get().users, user]
+        set({ users })
+      },
+      updateUser: (id, data) => {
+        const users = get().users.map(u =>
+          u.id === id ? { ...u, ...(data as any) } : u
+        )
+        set({ users })
+      },
+      deleteUser: (id) => {
+        const users = get().users.filter(u => u.id !== id)
+        set({ users })
+      },
     }),
     {
       name: 'neft-store',
@@ -474,6 +499,7 @@ export const useAppStore = create<AppState>()(
         projectTypes:  state.projectTypes,
         paymentTerms:  state.paymentTerms,
         deliveryPeriods:state.deliveryPeriods,
+        users:         state.users,
       }),
     }
   )

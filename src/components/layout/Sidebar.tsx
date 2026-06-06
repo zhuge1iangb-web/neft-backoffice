@@ -21,7 +21,7 @@ const navItems = (t: typeof translations.th) => [
   { href: '/service',        label: t.nav.service,        icon: WrenchScrewdriverIcon },
   { href: '/purchasing',     label: t.nav.purchasing,     icon: ShoppingCartIcon },
   { href: '/inventory',      label: t.nav.inventory,      icon: ArchiveBoxIcon },
-  { href: '/reports',        label: t.nav.reports,        icon: ChartBarIcon },
+  { href: '/reports',        label: (t.nav as any).reports ?? 'รายงาน', icon: ChartBarIcon },
   { href: '/notifications',  label: t.nav.notifications,  icon: BellIcon, badge: true },
   { href: '/users',          label: t.nav.users,          icon: UsersIcon },
   { href: '/master',         label: t.nav.master,         icon: CircleStackIcon },

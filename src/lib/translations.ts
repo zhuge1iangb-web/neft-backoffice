@@ -17,6 +17,7 @@ export const translations = {
       master: 'ข้อมูลหลัก',
       purchasing: 'การจัดซื้อ',
       inventory: 'คลังสินค้า',
+      reports: 'รายงาน',
       logout: 'ออกจากระบบ',
     },
     // Common
@@ -309,6 +310,7 @@ export const translations = {
       master: 'Master Data',
       purchasing: 'Purchasing',
       inventory: 'Inventory',
+      reports: 'Reports',
       logout: 'Logout',
     },
     common: {

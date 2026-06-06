@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 import { usePathname } from 'next/navigation'
 import { translations } from '@/lib/translations'
+import { useSLAAlerts } from '@/hooks/useSLAAlerts'
 
 function usePageTitle() {
   const pathname = usePathname()
@@ -18,6 +19,7 @@ function usePageTitle() {
     '/projects':     t.projects.title,
     '/finance':      t.finance.title,
     '/service':      t.service.title,
+    '/reports':      t.nav.reports,
     '/notifications':t.notifications.title,
     '/users':        t.users.title,
     '/master':       t.master.title,
@@ -30,6 +32,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const { currentUser, initialized, initialize } = useAppStore()
   const router = useRouter()
   const title = usePageTitle()
+  useSLAAlerts()
 
   useEffect(() => {
     if (!currentUser) router.replace('/')

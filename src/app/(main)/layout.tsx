@@ -29,7 +29,7 @@ function usePageTitle() {
 }
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser, initialized, initialize, hasHydrated } = useAppStore()
+  const { currentUser, initialized, initialize, hasHydrated, subscribeRealtime } = useAppStore()
   const router = useRouter()
   const title = usePageTitle()
   useSLAAlerts()
@@ -46,6 +46,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       initialize()
     }
   }, [currentUser, initialized, initialize])
+
+  // Once data is loaded, subscribe to Supabase Realtime so that changes made
+  // by other logged-in users (in other browser tabs/sessions) are reflected
+  // here automatically — no manual refresh needed.
+  useEffect(() => {
+    if (currentUser && initialized) {
+      subscribeRealtime()
+    }
+  }, [currentUser, initialized, subscribeRealtime])
 
   if (!hasHydrated || !currentUser) return null
 

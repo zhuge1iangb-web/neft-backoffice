@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase, hasSupabase } from '@/lib/supabase'
+import { notifyTicketEvent } from '@/lib/notify'
 import {
   demoUsers, demoCustomers, demoOpportunities, demoProjects,
   demoMilestones, demoInvoices, demoTickets, demoContracts, demoNotifications,
@@ -50,6 +51,8 @@ interface AppState {
   setLang: (l: Lang) => void
   initialized: boolean
   initialize: () => Promise<void>
+  realtimeSubscribed: boolean
+  subscribeRealtime: () => void
   customers: typeof demoCustomers
   opportunities: typeof demoOpportunities
   projects: typeof demoProjects
@@ -214,6 +217,51 @@ export const useAppStore = create<AppState>()(
           console.error('Supabase init error:', e)
         }
         set({ initialized: true })
+      },
+      realtimeSubscribed: false,
+      subscribeRealtime: () => {
+        if (!hasSupabase || !supabase) return
+        if (get().realtimeSubscribed) return
+        set({ realtimeSubscribed: true })
+
+        const KEY_TO_STATE: Record<string, keyof AppState> = {
+          customers: 'customers',
+          opportunities: 'opportunities',
+          projects: 'projects',
+          milestones: 'milestones',
+          invoices: 'invoices',
+          tickets: 'tickets',
+          contracts: 'contracts',
+          notifications: 'notifications',
+          vendors: 'vendors',
+          quotations: 'quotations',
+          purchaseOrders: 'purchaseOrders',
+          inventory: 'inventory',
+          projectTypes: 'projectTypes',
+          paymentTerms: 'paymentTerms',
+          deliveryPeriods: 'deliveryPeriods',
+          customerPortalAccounts: 'customerPortalAccounts',
+        }
+
+        supabase
+          .channel('app_data_realtime')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'app_data' },
+            (payload: any) => {
+              const row = payload.new ?? payload.old
+              if (!row || !row.key) return
+              const stateKey = KEY_TO_STATE[row.key]
+              if (!stateKey) return
+              // Apply incoming value as-is — Supabase row is the source of truth.
+              // (Our own writes will round-trip here too, but produce an
+              // identical value, so this is a harmless no-op re-render.)
+              if (payload.new && payload.new.value !== undefined) {
+                set({ [stateKey]: payload.new.value } as Partial<AppState>)
+              }
+            }
+          )
+          .subscribe()
       },
       customers:     demoCustomers,
       opportunities: demoOpportunities,
@@ -434,13 +482,25 @@ export const useAppStore = create<AppState>()(
         const tickets = [ticket, ...get().tickets]
         set({ tickets })
         syncToSupabase('tickets', tickets)
+        notifyTicketEvent({ event: 'created', ticket, accounts: get().customerPortalAccounts })
       },
       updateTicket: (id, data) => {
+        const prev = get().tickets.find(t => t.id === id)
         const tickets = get().tickets.map(t =>
           t.id === id ? { ...t, ...(data as any) } : t
         )
         set({ tickets })
         syncToSupabase('tickets', tickets)
+        const updated = tickets.find(t => t.id === id)
+        if (prev && updated && (data as any).status && (data as any).status !== prev.status) {
+          const event = (data as any).status === 'Closed' ? 'closed' : 'statusChanged'
+          notifyTicketEvent({
+            event,
+            ticket: updated,
+            prevStatus: prev.status,
+            accounts: get().customerPortalAccounts,
+          })
+        }
       },
       deleteTicket: (id) => {
         const tickets = get().tickets.filter(t => t.id !== id)
@@ -453,6 +513,15 @@ export const useAppStore = create<AppState>()(
         )
         set({ tickets })
         syncToSupabase('tickets', tickets)
+        const updated = tickets.find(t => t.id === ticketId)
+        if (updated) {
+          notifyTicketEvent({
+            event: 'workLogAdded',
+            ticket: updated,
+            workLog: log,
+            accounts: get().customerPortalAccounts,
+          })
+        }
       },
       // Contracts
       updateContract: (id, data) => {

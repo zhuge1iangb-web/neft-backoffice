@@ -113,11 +113,17 @@ export async function POST(req: NextRequest) {
       if (tokens.length === 0) {
         results.line = 'SKIPPED: no LINE Notify token configured'
       } else {
-        const lineResults = await Promise.all(tokens.map(t => sendLineNotify(t, message)))
-        const failed = lineResults.filter(r => !r.ok)
-        results.line = failed.length === 0
-          ? `OK: sent to ${tokens.length} token(s)`
-          : `PARTIAL: ${failed.length}/${tokens.length} failed (status ${failed.map(f => f.status).join(',')})`
+        try {
+          const lineResults = await Promise.all(tokens.map(t => sendLineNotify(t, message)))
+          const failed = lineResults.filter(r => !r.ok)
+          results.line = failed.length === 0
+            ? `OK: sent to ${tokens.length} token(s)`
+            : `PARTIAL: ${failed.length}/${tokens.length} failed (status ${failed.map(f => f.status).join(',')})`
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err)
+          // LINE Notify (notify-api.line.me) was officially discontinued by LINE on 2025-03-31.
+          results.line = `ERROR: ${msg} (NOTE: LINE Notify service was discontinued by LINE on 31 Mar 2025 — this channel is no longer usable; consider migrating to LINE Messaging API)`
+        }
       }
     }
 

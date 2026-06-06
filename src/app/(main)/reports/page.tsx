@@ -61,9 +61,9 @@ export default function ReportsPage() {
   // ── Revenue ──
   const revenueStats = useMemo(() => {
     const paid   = invoices.filter(i => i.status === 'Paid')
-    const unpaid = invoices.filter(i => ['Sent','Overdue'].includes(i.status))
-    const total  = paid.reduce((s, i) => s + i.amount, 0)
-    const pending= unpaid.reduce((s, i) => s + i.amount, 0)
+    const unpaid = invoices.filter(i => ['Unpaid','Overdue'].includes(i.status))
+    const total  = paid.reduce((s, i) => s + i.billedAmount, 0)
+    const pending= unpaid.reduce((s, i) => s + (i.billedAmount - i.paidAmount), 0)
     const target = 5000000
 
     const monthly = MONTHS_TH.map((m, idx) => ({
@@ -447,7 +447,7 @@ export default function ReportsPage() {
                     <tr key={inv.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                       <td className="px-3 py-2.5 text-xs font-mono text-gray-600">{inv.invoiceNo}</td>
                       <td className="px-3 py-2.5 text-xs text-gray-700">{customers.find(c => c.id === inv.customerId)?.name || '—'}</td>
-                      <td className="px-3 py-2.5 text-xs font-semibold text-gray-800">฿{inv.amount.toLocaleString()}</td>
+                      <td className="px-3 py-2.5 text-xs font-semibold text-gray-800">฿{inv.billedAmount.toLocaleString()}</td>
                       <td className="px-3 py-2.5">
                         <Badge variant={inv.status === 'Paid' ? 'success' : inv.status === 'Overdue' ? 'error' : 'warning'} size="sm">{inv.status}</Badge>
                       </td>

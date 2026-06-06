@@ -61,7 +61,17 @@ export default function CustomerPortalPage() {
     setLoginLoading(true)
     setLoginErr('')
     await new Promise(r => setTimeout(r, 500))
-    const cred = customerPortalAccounts.find(c =>
+    // Read directly from localStorage to avoid Zustand hydration timing issues
+    let accounts = customerPortalAccounts
+    try {
+      const raw = localStorage.getItem('neft-store')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const stored = parsed?.state?.customerPortalAccounts
+        if (Array.isArray(stored) && stored.length > 0) accounts = stored
+      }
+    } catch {}
+    const cred = accounts.find(c =>
       c.email === email.trim().toLowerCase() && c.password === password && c.active
     )
     if (!cred) {

@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import { useAppStore } from '@/store'
 import { translations } from '@/lib/translations'
 import Button from '@/components/ui/Button'
-import Badge from '@/components/ui/Badge'
+import Badge, { severityVariant, slaVariant, invoiceStatusVariant } from '@/components/ui/Badge'
 import {
   ArrowDownTrayIcon, ChartBarIcon, DocumentCheckIcon,
   BanknotesIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon,
@@ -245,13 +245,13 @@ export default function ReportsPage() {
                       <td className="px-3 py-2.5 text-xs text-gray-500">{customers.find(c => c.id === ticket.customerId)?.name || '—'}</td>
                       <td className="px-3 py-2.5 text-xs text-gray-500">{ticket.channel}</td>
                       <td className="px-3 py-2.5">
-                        <Badge variant={ticket.severity === 'Critical' ? 'error' : ticket.severity === 'High' ? 'warning' : 'info'} size="sm">{ticket.severity}</Badge>
+                        <Badge variant={severityVariant(ticket.severity)}>{ticket.severity}</Badge>
                       </td>
                       <td className="px-3 py-2.5">
-                        <Badge variant={['Resolved','Closed'].includes(ticket.status) ? 'success' : ticket.status === 'Escalated' ? 'error' : 'default'} size="sm">{ticket.status}</Badge>
+                        <Badge variant={['Resolved','Closed'].includes(ticket.status) ? 'success' : ticket.status === 'Escalated' ? 'danger' : 'default'}>{ticket.status}</Badge>
                       </td>
                       <td className="px-3 py-2.5">
-                        <Badge variant={ticket.slaStatus === 'Met' ? 'success' : ticket.slaStatus === 'Breached' ? 'error' : 'warning'} size="sm">{ticket.slaStatus}</Badge>
+                        <Badge variant={slaVariant(ticket.slaStatus)}>{ticket.slaStatus}</Badge>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-gray-400">{ticket.resolutionDue || '—'}</td>
                     </tr>
@@ -289,7 +289,7 @@ export default function ReportsPage() {
                 <div key={row.priority}>
                   <div className="flex justify-between items-center mb-1.5">
                     <div className="flex items-center gap-2">
-                      <Badge variant={row.priority === 'Critical' ? 'error' : row.priority === 'High' ? 'warning' : 'info'}>{row.priority}</Badge>
+                      <Badge variant={severityVariant(row.priority)}>{row.priority}</Badge>
                       <span className="text-xs text-gray-500">{row.met}/{row.total} tickets</span>
                     </div>
                     <span className={`text-sm font-bold ${row.rate >= 90 ? 'text-green-600' : row.rate >= 75 ? 'text-yellow-600' : 'text-red-600'}`}>{row.rate}%</span>
@@ -324,7 +324,7 @@ export default function ReportsPage() {
                   ].map((row, i) => (
                     <tr key={i} className="border-b border-gray-50">
                       <td className="px-3 py-2.5">
-                        <Badge variant={row.level === 'Critical' ? 'error' : row.level === 'High' ? 'warning' : 'info'}>{row.level}</Badge>
+                        <Badge variant={severityVariant(row.level)}>{row.level}</Badge>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-gray-700 font-medium">{row.res}</td>
                       <td className="px-3 py-2.5 text-xs text-gray-700 font-medium">{row.resolve}</td>
@@ -350,8 +350,8 @@ export default function ReportsPage() {
                       <td className="px-4 py-3 text-xs font-mono text-gray-400">#{ticket.id}</td>
                       <td className="px-4 py-3 text-xs text-gray-700 font-medium max-w-[200px] truncate">{ticket.subject}</td>
                       <td className="px-4 py-3 text-xs text-gray-500">{customers.find(c => c.id === ticket.customerId)?.name || '—'}</td>
-                      <td className="px-4 py-3"><Badge variant={ticket.severity === 'Critical' ? 'error' : 'warning'} size="sm">{ticket.severity}</Badge></td>
-                      <td className="px-4 py-3"><Badge variant={ticket.slaStatus === 'Breached' ? 'error' : 'warning'} size="sm">{ticket.slaStatus}</Badge></td>
+                      <td className="px-4 py-3"><Badge variant={severityVariant(ticket.severity)}>{ticket.severity}</Badge></td>
+                      <td className="px-4 py-3"><Badge variant={slaVariant(ticket.slaStatus)}>{ticket.slaStatus}</Badge></td>
                       <td className="px-4 py-3 text-xs text-gray-400">{ticket.resolutionDue}</td>
                     </tr>
                   ))}
@@ -449,7 +449,7 @@ export default function ReportsPage() {
                       <td className="px-3 py-2.5 text-xs text-gray-700">{customers.find(c => c.id === inv.customerId)?.name || '—'}</td>
                       <td className="px-3 py-2.5 text-xs font-semibold text-gray-800">฿{inv.billedAmount.toLocaleString()}</td>
                       <td className="px-3 py-2.5">
-                        <Badge variant={inv.status === 'Paid' ? 'success' : inv.status === 'Overdue' ? 'error' : 'warning'} size="sm">{inv.status}</Badge>
+                        <Badge variant={invoiceStatusVariant(inv.status)}>{inv.status}</Badge>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-gray-400">{inv.dueDate}</td>
                     </tr>

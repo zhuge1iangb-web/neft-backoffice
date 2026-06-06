@@ -53,7 +53,7 @@ export default function LoginPage() {
           {/* Header */}
           <div className="bg-gradient-to-br from-[#0F2654] via-[#1B3875] to-[#1a4a9e] px-8 py-8 text-center">
             <div className="flex justify-center mb-3">
-              <Image src="/neft-logo.png" alt="NEFT Solution" width={160} height={54} className="h-12 w-auto object-contain drop-shadow-lg" priority />
+              <Image src="/neft-logo.png" alt="NEFT Solution" width={160} height={54} className="h-12 w-auto object-contain brightness-0 invert drop-shadow-lg" priority />
             </div>
             <div className="w-12 h-px bg-[#E84B0F] mx-auto mb-3 opacity-80" />
             <p className="text-blue-200 text-sm">{t.login.subtitle}</p>

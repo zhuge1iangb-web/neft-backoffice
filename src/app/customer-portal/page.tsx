@@ -159,7 +159,7 @@ export default function CustomerPortalPage() {
             {/* Header with logo */}
             <div className="bg-gradient-to-br from-[#0F2654] to-[#1B3875] px-8 py-8 text-center">
               <div className="flex justify-center mb-3">
-                <Image src="/neft-logo.png" alt="NEFT Solution" width={140} height={47} className="h-10 w-auto object-contain" priority />
+                <Image src="/neft-logo.png" alt="NEFT Solution" width={140} height={47} className="h-10 w-auto object-contain brightness-0 invert" priority />
               </div>
               <div className="w-10 h-px bg-[#E84B0F] mx-auto mb-3" />
               <p className="text-blue-100 text-sm font-medium">Customer Support Portal</p>
@@ -229,7 +229,7 @@ export default function CustomerPortalPage() {
         {/* Top nav */}
         <header className="bg-[#0F2654] text-white px-4 py-3 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
-            <Image src="/neft-logo.png" alt="NEFT" width={100} height={34} className="h-7 w-auto" />
+            <Image src="/neft-logo.png" alt="NEFT" width={100} height={34} className="h-7 w-auto brightness-0 invert" />
             <span className="text-white/60 text-sm hidden sm:inline">/ Customer Portal</span>
           </div>
           <div className="flex items-center gap-3">
@@ -355,7 +355,7 @@ export default function CustomerPortalPage() {
       {/* Top nav */}
       <header className="bg-[#0F2654] text-white px-4 py-3 flex items-center justify-between shadow-lg sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Image src="/neft-logo.png" alt="NEFT" width={110} height={37} className="h-8 w-auto" />
+          <Image src="/neft-logo.png" alt="NEFT" width={110} height={37} className="h-8 w-auto brightness-0 invert" />
           <div className="hidden sm:block">
             <span className="text-white/60 text-xs">Customer Support Portal</span>
           </div>

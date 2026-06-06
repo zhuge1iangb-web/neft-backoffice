@@ -45,7 +45,14 @@ export default function Sidebar() {
       <div className="flex items-center justify-between px-3 py-3 border-b border-white/10">
         {!collapsed && (
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Image src="/neft-logo.png" alt="NEFT Solution" width={120} height={40} className="h-8 w-auto object-contain" priority />
+            {/* brightness+invert makes dark logo white — blends perfectly on navy bg */}
+            <Image
+              src="/neft-logo.png"
+              alt="NEFT Solution"
+              width={120} height={40}
+              className="h-8 w-auto object-contain brightness-0 invert"
+              priority
+            />
           </div>
         )}
         {collapsed && (

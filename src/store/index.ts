@@ -62,6 +62,11 @@ interface AppState {
   projectTypes: typeof demoProjectTypes
   paymentTerms: typeof demoPaymentTerms
   deliveryPeriods: typeof demoDeliveryPeriods
+  // Sales Targets
+  salesTargets: SalesTarget[]
+  addSalesTarget: (data: Omit<SalesTarget, 'id' | 'createdAt' | 'updatedAt'>) => void
+  updateSalesTarget: (id: number, data: Partial<SalesTarget>) => void
+  deleteSalesTarget: (id: number) => void
   // CM SLA Options
   addCmSla: (data: { name: string; responseTimeHours: number; resolutionTimeHours: number; description: string }) => void
   updateCmSla: (id: number, data: { name: string; responseTimeHours: number; resolutionTimeHours: number; description: string }) => void
@@ -84,7 +89,7 @@ interface AppState {
   updateProject: (id: number, data: Partial<ProjectExtended>) => void
   deleteProject: (id: number) => void
   createProjectFromOpp: (oppId: number) => void
-  addProjectWorkLog: (log: ProjectWorkLog) => void
+  addProjectWorkLog: (log: ProjectWorkLog) => Promise<void>
   generateProjectNo: () => Promise<string>
   // Vendors
   addVendor: (vendor: typeof demoVendors[number]) => void
@@ -168,6 +173,20 @@ export type ProjectWorkLog = {
   performedBy: string
   performedById: number | null
   createdAt: string
+}
+
+export type SalesTarget = {
+  id: number
+  userId: number | null
+  userName: string
+  year: number
+  month: number | null  // null = ทั้งปี (annual), 1-12 = รายเดือน
+  targetRevenue: number
+  targetGp: number
+  targetGpPct: number
+  isOrgTarget: boolean  // true = target ขององค์กร
+  createdAt: string
+  updatedAt: string
 }
 
 // ---- Extended Project type (adds new fields from Wave B migration) ----
@@ -614,6 +633,35 @@ function rowToProjectWorkLog(r: any): ProjectWorkLog {
   }
 }
 
+function salesTargetToRow(t: SalesTarget) {
+  return {
+    user_id: t.userId ?? null,
+    user_name: t.userName ?? null,
+    year: t.year,
+    month: t.month ?? null,
+    target_revenue: t.targetRevenue ?? 0,
+    target_gp: t.targetGp ?? 0,
+    target_gp_pct: t.targetGpPct ?? 0,
+    is_org_target: t.isOrgTarget ?? false,
+    updated_at: new Date().toISOString(),
+  }
+}
+function rowToSalesTarget(r: any): SalesTarget {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    userName: r.user_name,
+    year: r.year,
+    month: r.month,
+    targetRevenue: r.target_revenue ?? 0,
+    targetGp: r.target_gp ?? 0,
+    targetGpPct: r.target_gp_pct ?? 0,
+    isOrgTarget: r.is_org_target ?? false,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }
+}
+
 async function fetchProjectsWithLogs(): Promise<ProjectExtended[] | null> {
   if (!hasSupabase || !supabase) return null
   try {
@@ -893,7 +941,7 @@ export const useAppStore = create<AppState>()(
         // relational tables, fetched directly (source of truth). No
         // demo-data fallback.
         try {
-          const [oppRows, projRows, msRows, invoiceRows, slaRows, projNameRows] = await Promise.all([
+          const [oppRows, projRows, msRows, invoiceRows, slaRows, projNameRows, salesTargetRows] = await Promise.all([
             fetchTableRows('opportunities', rowToOpportunity),
             fetchProjectsWithLogs(),
             fetchTableRows('milestones', rowToMilestone),
@@ -905,6 +953,7 @@ export const useAppStore = create<AppState>()(
             fetchTableRows('project_name_options', (r: any) => ({
               id: r.id, name: r.name, isActive: r.is_active, createdAt: r.created_at,
             })),
+            fetchTableRows('sales_targets', rowToSalesTarget),
           ])
           const patch2: Partial<AppState> = {}
           if (oppRows) patch2.opportunities = oppRows
@@ -916,6 +965,7 @@ export const useAppStore = create<AppState>()(
           if (invoiceRows) patch2.invoices = invoiceRows
           if (slaRows) patch2.cmSlaOptions = slaRows
           if (projNameRows) patch2.projectNameOptions = projNameRows
+          if (salesTargetRows) patch2.salesTargets = salesTargetRows
           set(patch2)
         } catch (e) {
           console.error('Supabase wave2 init error:', e)
@@ -1076,6 +1126,12 @@ export const useAppStore = create<AppState>()(
           .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleProjectsRefetch)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'project_work_logs' }, scheduleProjectsRefetch)
           .subscribe()
+
+        const refetchSalesTargets = makeTableRefetcher('sales_targets', rowToSalesTarget, 'salesTargets')
+        supabase
+          .channel('sales_targets_realtime')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'sales_targets' }, refetchSalesTargets)
+          .subscribe()
         supabase
           .channel('milestones_realtime')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'milestones' }, refetchMilestones)
@@ -1171,6 +1227,34 @@ export const useAppStore = create<AppState>()(
       projectTypes:  demoProjectTypes,
       paymentTerms:  demoPaymentTerms,
       deliveryPeriods:demoDeliveryPeriods,
+      // Sales Targets — live from real table
+      salesTargets: [] as SalesTarget[],
+      addSalesTarget: (data) => {
+        const tempId = Date.now()
+        const now = new Date().toISOString()
+        const newTarget: SalesTarget = { id: tempId, ...data, createdAt: now, updatedAt: now }
+        set({ salesTargets: [...get().salesTargets, newTarget] })
+        insertRow('sales_targets', salesTargetToRow(newTarget), async () => {
+          const rows = await fetchTableRows('sales_targets', rowToSalesTarget)
+          if (rows) set({ salesTargets: rows })
+        })
+      },
+      updateSalesTarget: (id, data) => {
+        const targets = get().salesTargets.map(t => t.id === id ? { ...t, ...data, updatedAt: new Date().toISOString() } : t)
+        set({ salesTargets: targets })
+        const updated = targets.find(t => t.id === id)
+        if (updated) updateRow('sales_targets', id, salesTargetToRow(updated), async () => {
+          const rows = await fetchTableRows('sales_targets', rowToSalesTarget)
+          if (rows) set({ salesTargets: rows })
+        })
+      },
+      deleteSalesTarget: (id) => {
+        set({ salesTargets: get().salesTargets.filter(t => t.id !== id) })
+        deleteRow('sales_targets', id, async () => {
+          const rows = await fetchTableRows('sales_targets', rowToSalesTarget)
+          if (rows) set({ salesTargets: rows })
+        })
+      },
       // CM SLA Options
       addCmSla: (data) => {
         const tempId = Date.now()
@@ -1337,27 +1421,31 @@ export const useAppStore = create<AppState>()(
           if (rows) set({ projects: rows, projectWorkLogs: rows.flatMap(p => p.workLogs || []) })
         })
       },
-      addProjectWorkLog: (log) => {
-        // Optimistic update — append log to the project's workLogs array
+      addProjectWorkLog: async (log) => {
+        // Optimistic update — append log to the project's workLogs array immediately
         const projects = get().projects.map(p =>
           p.id === log.projectId
             ? { ...p, workLogs: [...(p.workLogs || []), log], progress: log.progress, status: log.status, latestUpdate: log.description }
             : p
         )
         set({ projects, projectWorkLogs: [...get().projectWorkLogs, log] })
-        // Also update project row's progress + status + latest_update
-        const proj = projects.find(p => p.id === log.projectId)
-        if (proj) {
-          updateRow('projects', log.projectId, {
-            progress: log.progress, status: log.status,
-            latest_update: log.description, updated_at: new Date().toISOString()
-          })
-        }
-        // Insert work log row
-        insertRow('project_work_logs', projectWorkLogToRow(log), async () => {
-          const rows = await fetchProjectsWithLogs()
-          if (rows) set({ projects: rows, projectWorkLogs: rows.flatMap(p => p.workLogs || []) })
+        // Also update project row's progress + status + latest_update in parallel
+        updateRow('projects', log.projectId, {
+          progress: log.progress, status: log.status,
+          latest_update: log.description, updated_at: new Date().toISOString()
         })
+        // Insert work log row — then always refetch to sync real DB ids
+        try {
+          if (hasSupabase && supabase) {
+            const { error } = await supabase.from('project_work_logs').insert(projectWorkLogToRow(log))
+            if (error) throw error
+          }
+        } catch (e) {
+          console.error('Supabase insert project_work_log error:', e)
+        }
+        // Post-write refetch to sync DB ids and ensure consistency
+        const rows = await fetchProjectsWithLogs()
+        if (rows) set({ projects: rows, projectWorkLogs: rows.flatMap(p => p.workLogs || []) })
       },
       createProjectFromOpp: async (oppId) => {
         const opp = get().opportunities.find(o => o.id === oppId)

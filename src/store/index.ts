@@ -864,7 +864,7 @@ export const useAppStore = create<AppState>()(
       logout: () => set({ currentUser: null }),
       lang: 'th',
       setLang: (l) => set({ lang: l }),
-      theme: 'blue' as 'blue' | 'red',
+      theme: 'red' as 'blue' | 'red',
       setTheme: (t) => {
         set({ theme: t })
         if (typeof document !== 'undefined') {

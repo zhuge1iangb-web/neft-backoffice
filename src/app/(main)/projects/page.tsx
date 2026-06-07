@@ -84,7 +84,7 @@ async function uploadFile(file: File, bucket: string, folder: string): Promise<s
 
 export default function ProjectsPage() {
   const {
-    lang, projects, users, customers, cmSlaOptions,
+    lang, projects, users, customers, cmSlaOptions, projectNameOptions,
     addProject, updateProject, deleteProject, addProjectWorkLog, generateProjectNo,
     currentUser,
   } = useAppStore()
@@ -120,6 +120,33 @@ export default function ProjectsPage() {
 
   // auto-calc contract end ใน Add form
   const contractEndPreview = calcContractEnd(form.contractStart, form.deliveryDays)
+
+  // auto-calc PM last date: pmFirstDate + (pmTotalCount-1) * pmFrequencyMonths months
+  function calcPmLastDate(firstDate: string, totalCount: string, freqMonths: string): string {
+    if (!firstDate || !totalCount || !freqMonths) return ''
+    const count = parseInt(totalCount)
+    const freq = parseFloat(freqMonths)
+    if (isNaN(count) || count <= 0 || isNaN(freq) || freq <= 0) return ''
+    const d = new Date(firstDate)
+    // เพิ่มจำนวนเดือน = (count - 1) * freq
+    const totalMonthsToAdd = (count - 1) * freq
+    const wholeMonths = Math.floor(totalMonthsToAdd)
+    const fracDays = Math.round((totalMonthsToAdd - wholeMonths) * 30)
+    d.setMonth(d.getMonth() + wholeMonths)
+    d.setDate(d.getDate() + fracDays)
+    return d.toISOString().split('T')[0]
+  }
+
+  const pmLastDatePreview = calcPmLastDate(form.pmFirstDate, form.pmTotalCount, form.pmFrequencyMonths)
+
+  // sync pmLastDate เข้า form อัตโนมัติเมื่อ pmFirstDate/pmTotalCount/pmFrequencyMonths เปลี่ยน
+  useEffect(() => {
+    const computed = calcPmLastDate(form.pmFirstDate, form.pmTotalCount, form.pmFrequencyMonths)
+    if (computed && computed !== form.pmLastDate) {
+      setForm(f => ({ ...f, pmLastDate: computed }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.pmFirstDate, form.pmTotalCount, form.pmFrequencyMonths])
 
   // Work log form
   const [wlForm, setWlForm] = useState({
@@ -433,10 +460,28 @@ export default function ProjectsPage() {
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-600 mb-1">ชื่อโครงการ <span className="text-red-500">*</span></label>
-                <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                  placeholder="ระบุชื่อโครงการ"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3875]/20" />
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  ชื่อโครงการ <span className="text-red-500">*</span>
+                  <span className="text-gray-400 font-normal ml-1">— เลือกจาก Master Data หรือพิมพ์ใหม่</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="project-name-datalist"
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    placeholder="เลือกหรือพิมพ์ชื่อโครงการ..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3875]/20"
+                  />
+                  <datalist id="project-name-datalist">
+                    {(projectNameOptions || []).filter(p => p.isActive).map(p => (
+                      <option key={p.id} value={p.name} />
+                    ))}
+                  </datalist>
+                </div>
+                {(projectNameOptions || []).filter(p => p.isActive).length === 0 && (
+                  <p className="text-xs text-gray-400 mt-1">ยังไม่มีชื่อโครงการใน Master Data — <a href="/master" className="text-[#1B3875] underline">เพิ่มได้ที่ Master Data</a></p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">ลูกค้า <span className="text-red-500">*</span></label>
@@ -583,9 +628,20 @@ export default function ProjectsPage() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">วันทำ PM ครั้งสุดท้าย</label>
-                <input type="date" value={form.pmLastDate} onChange={e => setForm({ ...form, pmLastDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  วันทำ PM ครั้งสุดท้าย
+                  {pmLastDatePreview && <span className="text-green-600 font-normal ml-1">✓ คำนวณอัตโนมัติ</span>}
+                </label>
+                <div className={`w-full px-3 py-2 border rounded-lg text-sm ${pmLastDatePreview ? 'border-green-200 bg-green-50 text-green-700 font-medium' : 'border-gray-100 bg-gray-50 text-gray-400'}`}>
+                  {pmLastDatePreview ? (
+                    <>
+                      {fmtDateTH(pmLastDatePreview)}
+                      <span className="text-xs text-green-500 ml-2 font-normal">
+                        (PM ครั้งที่ {form.pmTotalCount}: {fmtDateTH(form.pmFirstDate)} + {form.pmFrequencyMonths && form.pmTotalCount ? `${form.pmFrequencyMonths}×${parseInt(form.pmTotalCount)-1} เดือน` : ''})
+                      </span>
+                    </>
+                  ) : 'กรอกวัน PM แรก + จำนวนครั้ง + ความถี่ก่อน'}
+                </div>
               </div>
             </div>
           </div>

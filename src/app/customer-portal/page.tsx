@@ -493,12 +493,15 @@ export default function CustomerPortalPage() {
         }} />
         {/* Floating blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-[#E84B0F]/8 rounded-full blur-3xl"
-            style={{ animation: 'float1 8s ease-in-out infinite' }} />
+          {/* blob 1: top-left, orange accent */}
+          <div className="absolute top-10 left-10 w-72 h-72 rounded-full blur-3xl"
+            style={{ backgroundColor: 'rgba(232,75,15,0.08)', animation: 'float1 8s ease-in-out infinite' }} />
+          {/* blob 2: bottom-right, theme color */}
           <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full blur-3xl"
             style={{ backgroundColor: `${g.orb}33`, transition: 'background-color 0.8s ease', animation: 'float2 10s ease-in-out infinite' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl"
-            style={{ backgroundColor: `${g.orb}4D`, transition: 'background-color 0.8s ease', animation: 'float3 7s ease-in-out infinite' }} />
+          {/* blob 3: center, theme color large — inline transform ป้องกัน keyframe override */}
+          <div className="absolute w-[600px] h-[600px] rounded-full blur-3xl"
+            style={{ top: '50%', left: '50%', backgroundColor: `${g.orb}4D`, transition: 'background-color 0.8s ease', animation: 'float3 7s ease-in-out infinite' }} />
         </div>
         {/* CSS keyframes */}
         <style>{`

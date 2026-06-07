@@ -40,8 +40,8 @@ interface AppState {
   logout: () => void
   lang: Lang
   setLang: (l: Lang) => void
-  theme: 'light' | 'dark'
-  setTheme: (t: 'light' | 'dark') => void
+  theme: 'blue' | 'red'
+  setTheme: (t: 'blue' | 'red') => void
   initialized: boolean
   initialize: () => Promise<void>
   realtimeSubscribed: boolean
@@ -864,11 +864,11 @@ export const useAppStore = create<AppState>()(
       logout: () => set({ currentUser: null }),
       lang: 'th',
       setLang: (l) => set({ lang: l }),
-      theme: 'light' as 'light' | 'dark',
+      theme: 'blue' as 'blue' | 'red',
       setTheme: (t) => {
         set({ theme: t })
         if (typeof document !== 'undefined') {
-          document.documentElement.classList.toggle('dark', t === 'dark')
+          document.documentElement.classList.toggle('red-theme', t === 'red')
         }
       },
       initialized: false,

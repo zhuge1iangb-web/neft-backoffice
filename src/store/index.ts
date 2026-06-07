@@ -40,6 +40,8 @@ interface AppState {
   logout: () => void
   lang: Lang
   setLang: (l: Lang) => void
+  theme: 'light' | 'dark'
+  setTheme: (t: 'light' | 'dark') => void
   initialized: boolean
   initialize: () => Promise<void>
   realtimeSubscribed: boolean
@@ -862,6 +864,13 @@ export const useAppStore = create<AppState>()(
       logout: () => set({ currentUser: null }),
       lang: 'th',
       setLang: (l) => set({ lang: l }),
+      theme: 'light' as 'light' | 'dark',
+      setTheme: (t) => {
+        set({ theme: t })
+        if (typeof document !== 'undefined') {
+          document.documentElement.classList.toggle('dark', t === 'dark')
+        }
+      },
       initialized: false,
       initialize: async () => {
         if (get().initialized) return

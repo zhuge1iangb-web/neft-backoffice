@@ -158,6 +158,7 @@ export default function ProjectsPage() {
     attachmentFiles: [] as File[],
   })
   const [wlUploading, setWlUploading] = useState(false)
+  const [wlSaveStatus, setWlSaveStatus] = useState<'idle' | 'saved'>('idle')
   const wlFileRef = useRef<HTMLInputElement>(null)
 
   // Attachment upload (contract / other)
@@ -170,6 +171,7 @@ export default function ProjectsPage() {
   // Edit project inline
   const [editForm, setEditForm] = useState<Partial<ProjectExtended>>({})
   const [editMode, setEditMode] = useState(false)
+  const [saveEditStatus, setSaveEditStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   // auto-calc contractEnd ใน edit form
   const editContractEndPreview = calcContractEnd(
     (editForm.contractStart as string) || '',
@@ -333,6 +335,8 @@ export default function ProjectsPage() {
     setShowWorkLogModal(false)
     setWlForm({ actionType: ACTION_TYPES[0], description: '', status: 'In Progress', performedByUserId: String(currentUser?.id || ''), attachmentFiles: [] })
     setWlUploading(false)
+    setWlSaveStatus('saved')
+    setTimeout(() => setWlSaveStatus('idle'), 3000)
   }
 
   // helper ปิด contractNo modal
@@ -354,8 +358,9 @@ export default function ProjectsPage() {
   }
 
   // ---- Save edit ----
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!detailProj) return
+    setSaveEditStatus('saving')
     const updatedEdit = { ...editForm }
     // คำนวณ contractEnd อัตโนมัติ
     if (editContractEndPreview) {
@@ -376,6 +381,8 @@ export default function ProjectsPage() {
       if (c) updatedEdit.customerName = c.name
     }
     updateProject(detailProj.id, updatedEdit)
+    setSaveEditStatus('saved')
+    setTimeout(() => setSaveEditStatus('idle'), 2500)
     // ไม่ reset editMode — ให้ยังคงแก้ไขได้ต่อ
   }
 
@@ -998,10 +1005,13 @@ export default function ProjectsPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 pt-3 border-t border-gray-100">
-                  <Button size="sm" onClick={handleSaveEdit} disabled={!editForm.pmUserId}>
-                    💾 บันทึกข้อมูล
+                <div className="flex gap-2 pt-3 border-t border-gray-100 items-center">
+                  <Button size="sm" onClick={handleSaveEdit} disabled={!editForm.pmUserId || saveEditStatus === 'saving'}>
+                    {saveEditStatus === 'saving' ? '⏳ กำลังบันทึก...' : saveEditStatus === 'saved' ? '✅ บันทึกแล้ว!' : '💾 บันทึกข้อมูล'}
                   </Button>
+                  {saveEditStatus === 'saved' && (
+                    <span className="text-xs text-green-600 font-medium animate-pulse">อัปเดตเรียบร้อย</span>
+                  )}
                   <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50"
                     onClick={() => { setShowDetail(null); setShowDeleteConfirm(detailProj.id) }}>
                     ลบโครงการ
@@ -1048,8 +1058,11 @@ export default function ProjectsPage() {
                   </div>
                   <div className="flex gap-2 items-center">
                     <Button size="sm" onClick={handleAddWorkLog} disabled={!wlForm.description || !wlForm.performedByUserId || wlUploading}>
-                      {wlUploading ? 'กำลังบันทึก...' : '💾 บันทึก Work Log'}
+                      {wlUploading ? '⏳ กำลังบันทึก...' : wlSaveStatus === 'saved' ? '✅ บันทึกแล้ว!' : '💾 บันทึก Work Log'}
                     </Button>
+                    {wlSaveStatus === 'saved' && (
+                      <span className="text-xs text-green-600 font-medium">บันทึกสำเร็จ ✓</span>
+                    )}
                     <button type="button" onClick={() => setShowWorkLogModal(true)}
                       className="text-xs text-blue-600 hover:underline">+ แนบไฟล์</button>
                   </div>

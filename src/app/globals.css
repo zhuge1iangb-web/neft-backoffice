@@ -5,6 +5,28 @@
 @layer base {
   * { box-sizing: border-box; }
   body { font-family: 'Sarabun', 'Noto Sans Thai', sans-serif; }
+
+  /* ===== Blue Theme (default) ===== */
+  :root {
+    --brand-navy:   #0F2654;
+    --brand-blue:   #1B3875;
+    --brand-light:  #EBF3FF;
+    --brand-text:   #0F2654;
+    --brand-accent: #E84B0F;
+    --brand-hover:  rgba(27, 56, 117, 0.08);
+    --brand-ring:   rgba(27, 56, 117, 0.25);
+  }
+
+  /* ===== Red Theme — กดปุ่มสลับสีแดงเข้ม ===== */
+  .red-theme {
+    --brand-navy:   #6B1A1A;
+    --brand-blue:   #8B2222;
+    --brand-light:  #FFF0F0;
+    --brand-text:   #6B1A1A;
+    --brand-accent: #E84B0F;
+    --brand-hover:  rgba(107, 26, 26, 0.08);
+    --brand-ring:   rgba(107, 26, 26, 0.25);
+  }
 }
 
 @layer utilities {

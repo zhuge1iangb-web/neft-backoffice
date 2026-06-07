@@ -8,6 +8,7 @@ import Header from '@/components/layout/Header'
 import { usePathname } from 'next/navigation'
 import { translations } from '@/lib/translations'
 import { useSLAAlerts } from '@/hooks/useSLAAlerts'
+import { canAccessPath } from '@/lib/permissions'
 
 function usePageTitle() {
   const pathname = usePathname()
@@ -31,6 +32,7 @@ function usePageTitle() {
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, initialized, initialize, hasHydrated, subscribeRealtime } = useAppStore()
   const router = useRouter()
+  const pathname = usePathname()
   const title = usePageTitle()
   useSLAAlerts()
 
@@ -40,6 +42,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (hasHydrated && !currentUser) router.replace('/')
   }, [hasHydrated, currentUser, router])
+
+  // ตรวจสิทธิ์ตาม role — ถ้า staff พิมพ์ URL ตรงไปยัง module ที่ไม่ควรเห็น
+  // ให้เด้งกลับไปหน้า dashboard (ป้องกันการเข้าถึงนอกเหนือจากเมนูที่ Sidebar กรองไว้)
+  useEffect(() => {
+    if (hasHydrated && currentUser && !canAccessPath(currentUser.role, pathname)) {
+      router.replace('/dashboard')
+    }
+  }, [hasHydrated, currentUser, pathname, router])
 
   useEffect(() => {
     if (currentUser && !initialized) {
@@ -61,7 +71,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isLoading = hasSupabase && !initialized
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F4F6FA]">
+    <div className="flex h-screen overflow-hidden bg-[#F4F6FA] dark:bg-gray-950 transition-colors">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header title={title} />
@@ -70,7 +80,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1B3875] mx-auto mb-4" />
-                <p className="text-sm text-gray-500">กำลังโหลดข้อมูล...</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {translations[useAppStore.getState().lang].common.loading}
+                </p>
               </div>
             </div>
           ) : children}

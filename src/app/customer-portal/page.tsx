@@ -17,12 +17,182 @@ import {
 // Each customer only sees tickets tied to their customerId
 // NO credential hints shown on login page (security)
 
-const CHANNEL_LABELS: Record<string, string> = { Phone: 'โทรศัพท์', Web: 'Web Portal', Email: 'อีเมล' }
-const STATUS_TH: Record<string, string> = {
-  'Open': 'รับเรื่อง', 'Assigned': 'มอบหมายแล้ว', 'In Progress': 'กำลังดำเนินการ',
-  'Pending Customer': 'รอข้อมูลจากลูกค้า', 'Pending Vendor': 'รอ Vendor',
-  'Escalated': 'ยกระดับปัญหา', 'Resolved': 'แก้ไขแล้ว', 'Closed': 'ปิด Case'
+type PortalLang = 'th' | 'en'
+
+const CHANNEL_LABELS: Record<PortalLang, Record<string, string>> = {
+  th: { Phone: 'โทรศัพท์', Web: 'Web Portal', Email: 'อีเมล' },
+  en: { Phone: 'Phone', Web: 'Web Portal', Email: 'Email' },
 }
+const STATUS_LABELS: Record<PortalLang, Record<string, string>> = {
+  th: {
+    'Open': 'รับเรื่อง', 'Assigned': 'มอบหมายแล้ว', 'In Progress': 'กำลังดำเนินการ',
+    'Pending Customer': 'รอข้อมูลจากลูกค้า', 'Pending Vendor': 'รอ Vendor',
+    'Escalated': 'ยกระดับปัญหา', 'Resolved': 'แก้ไขแล้ว', 'Closed': 'ปิด Case'
+  },
+  en: {
+    'Open': 'Open', 'Assigned': 'Assigned', 'In Progress': 'In Progress',
+    'Pending Customer': 'Pending Customer', 'Pending Vendor': 'Pending Vendor',
+    'Escalated': 'Escalated', 'Resolved': 'Resolved', 'Closed': 'Closed'
+  },
+}
+
+// ─── Bilingual UI text for the Customer Portal (TH/EN) ─────────────────────
+const PT = {
+  th: {
+    tagline: 'ติดตามสถานะ Case และแจ้งปัญหา',
+    emailLabel: 'อีเมลบริษัท',
+    passwordLabel: 'รหัสผ่าน',
+    loginBtn: 'เข้าสู่ระบบ',
+    securityNote: (phone: string) => <>ระบบนี้สำหรับลูกค้า NEFT Solution เท่านั้น หากยังไม่มี account กรุณาติดต่อ <span className="font-medium text-[#1B3875]">{phone}</span> เพื่อขอรับ credentials</>,
+    staffPrompt: 'Engineer/Staff?',
+    staffLogin: 'Staff Login →',
+    footer: '© 2026 NEFT Solution Co., Ltd. · 24/7: 02-096-2377 กด 4',
+    loginErr: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาติดต่อ NEFT เพื่อขอรับ credentials',
+    backToList: 'กลับรายการ Case',
+    copy: 'คัดลอก',
+    copied: '✓ คัดลอกแล้ว',
+    logout: 'ออก',
+    logoutFull: 'ออกจากระบบ',
+    severity: 'ระดับความรุนแรง',
+    channel: 'ช่องทางแจ้งเหตุ',
+    assignee: 'ผู้รับผิดชอบ',
+    responseDue: 'Response Due',
+    resolutionDue: 'Resolution Due',
+    issueDetail: 'รายละเอียดปัญหา',
+    escalatedTitle: 'ยกระดับปัญหาไปยังผู้เชี่ยวชาญ',
+    escalatedTo: 'ส่งต่อไปยัง:',
+    escalatedReason: 'เหตุผล:',
+    resolutionTitle: 'ผลการแก้ไขปัญหา',
+    rootCause: 'Root Cause:',
+    resolutionMethod: 'วิธีแก้ไข:',
+    history: (n: number) => `ประวัติการดำเนินการ (${n} รายการ)`,
+    noHistory: 'ยังไม่มีบันทึก',
+    welcome: (name: string) => `ยินดีต้อนรับ, ${name}`,
+    statTotal: 'Case ทั้งหมด',
+    statOpen: 'กำลังดำเนินการ',
+    statResolved: 'แก้ไขแล้ว',
+    searchPlaceholder: 'ค้นหา Case Number หรือหัวข้อ...',
+    filterAll: 'ทั้งหมด',
+    filterOpen: 'กำลังดำเนินการ',
+    filterResolved: 'แก้ไขแล้ว',
+    newTicket: 'แจ้งปัญหาใหม่',
+    newTicketTitle: 'แจ้งปัญหา / เปิด Case ใหม่',
+    newTicketSub: 'ระบบจะออก Case Number ให้อัตโนมัติ · Engineer ติดต่อกลับตาม SLA',
+    channelLabel: 'ช่องทางการแจ้ง',
+    subjectLabel: 'หัวข้อปัญหา *',
+    subjectPlaceholder: 'อธิบายปัญหาโดยย่อ',
+    severitySelect: {
+      Critical: '🔴 Critical — ระบบหยุดทำงาน',
+      High: '🟠 High — กระทบการทำงาน',
+      Medium: '🟡 Medium — ทำงานได้บ้าง',
+      Low: '🔵 Low — ปัญหาเล็กน้อย',
+    },
+    contactPhone: 'เบอร์โทรศัพท์ติดต่อ',
+    descLabel: 'รายละเอียดปัญหา',
+    descPlaceholder: 'อธิบายอาการปัญหา ขั้นตอนที่เกิดขึ้น อุปกรณ์ที่เกี่ยวข้อง สิ่งที่ลองแก้ไขแล้ว...',
+    slaInfo: (sev: string) => {
+      const map: Record<string, string> = {
+        Critical: 'Response ภายใน 4 ชั่วโมง · Resolution ภายใน 12 ชั่วโมง',
+        High: 'Response ภายใน 8 ชั่วโมง · Resolution ภายใน 24 ชั่วโมง',
+        Medium: 'Response ภายใน 24 ชั่วโมง · Resolution ภายใน 72 ชั่วโมง',
+        Low: 'Response ภายใน 48 ชั่วโมง · Resolution ภายใน 5 วันทำการ',
+      }
+      return map[sev] || map.Low
+    },
+    slaLabel: 'SLA ของคุณ:',
+    urgentCall: 'กรณีเร่งด่วนโทร',
+    cancel: 'ยกเลิก',
+    submitTicket: 'ส่งคำร้อง + รับ Case Number',
+    caseListTitle: (n: number) => `Case ทั้งหมด (${n})`,
+    noCaseSearch: 'ไม่พบ Case ที่ค้นหา',
+    noCaseEmpty: 'ยังไม่มี Case — กดปุ่ม "แจ้งปัญหาใหม่" เพื่อเปิด Case',
+    escalatedBadge: 'ยกระดับแล้ว',
+    logEntries: 'บันทึก',
+    helpFooter: 'ต้องการความช่วยเหลือด่วน? โทร',
+    available247: '(24/7)',
+    workLogOpenedNote: (no: string, name: string, company: string) => `รับแจ้งปัญหาผ่าน Customer Portal โดย ${name} (${company}) — ออก Case ${no}`,
+    successOpened: 'เปิด Case สำเร็จ!',
+    successDetail: (no: string) => <>Case Number: <span className="font-mono font-bold">{no}</span> — Engineer จะติดต่อกลับภายใน SLA</>,
+    locale: 'th-TH',
+  },
+  en: {
+    tagline: 'Track your case status and report issues',
+    emailLabel: 'Company Email',
+    passwordLabel: 'Password',
+    loginBtn: 'Sign In',
+    securityNote: (phone: string) => <>This portal is for NEFT Solution customers only. If you don&apos;t have an account, please contact <span className="font-medium text-[#1B3875]">{phone}</span> to request credentials</>,
+    staffPrompt: 'Engineer/Staff?',
+    staffLogin: 'Staff Login →',
+    footer: '© 2026 NEFT Solution Co., Ltd. · 24/7: 02-096-2377 ext. 4',
+    loginErr: 'Invalid email or password. Please contact NEFT to request credentials.',
+    backToList: 'Back to case list',
+    copy: 'Copy',
+    copied: '✓ Copied',
+    logout: 'Log out',
+    logoutFull: 'Log out',
+    severity: 'Severity',
+    channel: 'Reported via',
+    assignee: 'Assigned to',
+    responseDue: 'Response Due',
+    resolutionDue: 'Resolution Due',
+    issueDetail: 'Issue Description',
+    escalatedTitle: 'Escalated to specialist team',
+    escalatedTo: 'Escalated to:',
+    escalatedReason: 'Reason:',
+    resolutionTitle: 'Resolution',
+    rootCause: 'Root Cause:',
+    resolutionMethod: 'Resolution:',
+    history: (n: number) => `Activity History (${n} entries)`,
+    noHistory: 'No activity yet',
+    welcome: (name: string) => `Welcome, ${name}`,
+    statTotal: 'Total Cases',
+    statOpen: 'In Progress',
+    statResolved: 'Resolved',
+    searchPlaceholder: 'Search by case number or subject...',
+    filterAll: 'All',
+    filterOpen: 'In Progress',
+    filterResolved: 'Resolved',
+    newTicket: 'Report New Issue',
+    newTicketTitle: 'Report an Issue / Open New Case',
+    newTicketSub: 'A case number will be issued automatically · Engineer will respond per SLA',
+    channelLabel: 'Reporting Channel',
+    subjectLabel: 'Issue Subject *',
+    subjectPlaceholder: 'Briefly describe the issue',
+    severitySelect: {
+      Critical: '🔴 Critical — System down',
+      High: '🟠 High — Impacts operations',
+      Medium: '🟡 Medium — Partially working',
+      Low: '🔵 Low — Minor issue',
+    },
+    contactPhone: 'Contact Phone Number',
+    descLabel: 'Issue Description',
+    descPlaceholder: 'Describe the symptoms, steps to reproduce, affected equipment, and any troubleshooting already tried...',
+    slaInfo: (sev: string) => {
+      const map: Record<string, string> = {
+        Critical: 'Response within 4 hours · Resolution within 12 hours',
+        High: 'Response within 8 hours · Resolution within 24 hours',
+        Medium: 'Response within 24 hours · Resolution within 72 hours',
+        Low: 'Response within 48 hours · Resolution within 5 business days',
+      }
+      return map[sev] || map.Low
+    },
+    slaLabel: 'Your SLA:',
+    urgentCall: 'For urgent issues, call',
+    cancel: 'Cancel',
+    submitTicket: 'Submit & Get Case Number',
+    caseListTitle: (n: number) => `All Cases (${n})`,
+    noCaseSearch: 'No matching cases found',
+    noCaseEmpty: 'No cases yet — click "Report New Issue" to open a case',
+    escalatedBadge: 'Escalated',
+    logEntries: 'entries',
+    helpFooter: 'Need urgent help? Call',
+    available247: '(24/7)',
+    workLogOpenedNote: (no: string, name: string, company: string) => `Issue reported via Customer Portal by ${name} (${company}) — Case ${no} created`,
+    successOpened: 'Case created successfully!',
+    successDetail: (no: string) => <>Case Number: <span className="font-mono font-bold">{no}</span> — An engineer will contact you within SLA</>,
+    locale: 'en-US',
+  },
+} as const
 
 type CustomerSession = {
   email: string
@@ -32,9 +202,37 @@ type CustomerSession = {
 }
 
 export default function CustomerPortalPage() {
-  const { tickets: localTickets, addTicket, customerPortalAccounts } = useAppStore()
-  // liveTickets: loaded from Supabase for cross-device sync; falls back to local store
-  const [liveTickets, setLiveTickets] = useState(localTickets)
+  // `tickets` comes straight from the Zustand store, which fetches from the
+  // real `tickets` / `ticket_work_logs` tables and stays live via a Supabase
+  // realtime subscription — the exact same source of truth the backoffice
+  // uses, so customer portal and backoffice always show identical tickets.
+  const { tickets: liveTickets, addTicket, customerPortalAccounts, initialize, initialized, subscribeRealtime, realtimeSubscribed, theme, setTheme } = useAppStore()
+  const isRed = theme === 'red'
+
+  // Apply red-theme CSS class on mount + whenever theme changes
+  useEffect(() => {
+    document.documentElement.classList.toggle('red-theme', isRed)
+  }, [isRed])
+
+  // The customer portal has its own session (CustomerSession, kept in
+  // sessionStorage) that's completely independent of the backoffice
+  // `currentUser`/auth flow. The store's `initialize()` — which fetches
+  // tickets, customers, etc. from Supabase — is normally only triggered by
+  // the backoffice `(main)` layout when `currentUser` is set. Landing here
+  // directly (e.g. a hard refresh on /customer-portal) never goes through
+  // that layout, so `tickets` stayed at its initial placeholder value and
+  // every customer_id filter matched nothing — Case list showed 0 even
+  // though real tickets existed. `initialize()` is idempotent (guarded by
+  // the `initialized` flag in the store), so calling it here is safe even
+  // if a backoffice session in the same browser already ran it.
+  // `subscribeRealtime()` opens the Supabase WebSocket so that any update
+  // made from the backoffice (work logs, status changes, etc.) is pushed to
+  // this portal immediately without requiring a manual refresh. It is also
+  // idempotent (guarded by `realtimeSubscribed`).
+  useEffect(() => {
+    if (!initialized) initialize()
+    if (!realtimeSubscribed) subscribeRealtime()
+  }, [initialized, initialize, realtimeSubscribed, subscribeRealtime])
   const [session, setSession] = useState<CustomerSession | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -47,43 +245,53 @@ export default function CustomerPortalPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'resolved'>('all')
   const [copied, setCopied] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState<string | null>(null)
+  const [portalLang, setPortalLang] = useState<PortalLang>('th')
 
   const [form, setForm] = useState({
     subject: '', description: '', severity: 'Medium',
     channel: 'Web', contactName: '', contactPhone: '', contactEmail: '',
   })
 
-  // Restore session from sessionStorage on mount
+  const tp = PT[portalLang]
+  const channelLabels = CHANNEL_LABELS[portalLang]
+  const statusLabels = STATUS_LABELS[portalLang]
+
+  const toggleLang = () => {
+    const next: PortalLang = portalLang === 'th' ? 'en' : 'th'
+    setPortalLang(next)
+    try { localStorage.setItem('neft_portal_lang', next) } catch {}
+  }
+
+  // Restore preferred language from localStorage on mount
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem('neft_customer_session')
-      if (saved) setSession(JSON.parse(saved))
+      const saved = localStorage.getItem('neft_portal_lang')
+      if (saved === 'th' || saved === 'en') setPortalLang(saved)
     } catch {}
   }, [])
 
-  // Load tickets from Supabase whenever session changes (cross-device sync)
+  // Restore session from sessionStorage on mount.
+  // Guard against stale/old-shape session blobs (e.g. cached before the
+  // migration to real Supabase tables, where customerId could be a string
+  // or a different ID entirely) — validate it still has a numeric
+  // customerId, otherwise drop it so the user logs in fresh against the
+  // current `customer_portal_accounts` data.
   useEffect(() => {
-    if (!session) return
-    const load = async () => {
-      if (hasSupabase && supabase) {
-        try {
-          const { data } = await supabase
-            .from('app_data')
-            .select('value')
-            .eq('key', 'tickets')
-            .single()
-          if (data?.value && Array.isArray(data.value)) {
-            setLiveTickets(data.value)
-            return
-          }
-        } catch {}
+    try {
+      const saved = sessionStorage.getItem('neft_customer_session')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        const cid = Number(parsed?.customerId)
+        if (parsed && Number.isFinite(cid) && cid > 0) {
+          setSession({ ...parsed, customerId: cid })
+        } else {
+          sessionStorage.removeItem('neft_customer_session')
+        }
       }
-      // Fallback to Zustand store (localStorage)
-      setLiveTickets(localTickets)
+    } catch {
+      try { sessionStorage.removeItem('neft_customer_session') } catch {}
     }
-    load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -93,42 +301,43 @@ export default function CustomerPortalPage() {
     const emailNorm = email.trim().toLowerCase()
     let cred: CustomerPortalAccount | undefined
 
-    // 1) Try Supabase first (real-time, cross-device)
+    // Source of truth: the real `customer_portal_accounts` table — same
+    // table the backoffice Users > Customer Portal page reads/writes via
+    // the Zustand store, so both surfaces always see identical accounts
+    // (no more app_data blob, no more localStorage fallback that could
+    // serve stale/local-only credentials).
     if (hasSupabase && supabase) {
       try {
         const { data } = await supabase
-          .from('app_data')
-          .select('value')
-          .eq('key', 'customerPortalAccounts')
-          .single()
-        if (data?.value && Array.isArray(data.value)) {
-          cred = (data.value as CustomerPortalAccount[]).find(
-            c => c.email === emailNorm && c.password === password && c.active
-          )
+          .from('customer_portal_accounts')
+          .select('*')
+          .eq('email', emailNorm)
+          .eq('password', password)
+          .eq('active', true)
+          .maybeSingle()
+        if (data) {
+          cred = {
+            id: data.id, name: data.name, company: data.company, email: data.email,
+            password: data.password, customerId: data.customer_id, active: data.active,
+            createdAt: data.created_at_label, lastLogin: data.last_login,
+            phones: data.phones ?? [], emails: data.emails ?? [], lineIds: data.line_ids ?? [],
+            lineNotifyTokens: data.line_notify_tokens ?? [],
+            notifyViaEmail: data.notify_via_email ?? false, notifyViaLine: data.notify_via_line ?? false,
+          }
         }
       } catch {
-        // fall through to local fallback
+        // fall through — cred stays undefined, shows login error below
       }
-    }
-
-    // 2) Fallback: localStorage (offline / Supabase not configured)
-    if (!cred) {
-      let accounts: CustomerPortalAccount[] = customerPortalAccounts
-      try {
-        const raw = localStorage.getItem('neft-store')
-        if (raw) {
-          const parsed = JSON.parse(raw)
-          const stored = parsed?.state?.customerPortalAccounts
-          if (Array.isArray(stored) && stored.length > 0) accounts = stored
-        }
-      } catch {}
-      cred = accounts.find(c =>
+    } else {
+      // Supabase not configured (local/offline dev) — fall back to the
+      // store's in-memory list (populated from the same table on init).
+      cred = customerPortalAccounts.find(c =>
         c.email === emailNorm && c.password === password && c.active
       )
     }
 
     if (!cred) {
-      setLoginErr('อีเมลหรือรหัสผ่านไม่ถูกต้อง กรุณาติดต่อ NEFT เพื่อขอรับ credentials')
+      setLoginErr(PT[portalLang].loginErr)
       setLoginLoading(false)
       return
     }
@@ -153,7 +362,7 @@ export default function CustomerPortalPage() {
 
   const myTickets = session
     ? liveTickets
-        .filter(t => t.customerId === session.customerId)
+        .filter(t => String(t.customerId) === String(session.customerId))
         .filter(t => {
           if (filterStatus === 'open') return !['Resolved', 'Closed'].includes(t.status)
           if (filterStatus === 'resolved') return ['Resolved', 'Closed'].includes(t.status)
@@ -166,7 +375,7 @@ export default function CustomerPortalPage() {
         )
     : []
 
-  const allMyTickets = session ? liveTickets.filter(t => t.customerId === session.customerId) : []
+  const allMyTickets = session ? liveTickets.filter(t => String(t.customerId) === String(session.customerId)) : []
   const openCount = allMyTickets.filter(t => !['Resolved', 'Closed'].includes(t.status)).length
   const resolvedCount = allMyTickets.filter(t => ['Resolved', 'Closed'].includes(t.status)).length
 
@@ -208,8 +417,8 @@ export default function CustomerPortalPage() {
       }]
     }
     addTicket(newTicket)
-    // Optimistically update liveTickets so new ticket appears immediately
-    setLiveTickets(prev => [newTicket as any, ...prev])
+    // `addTicket` updates the shared Zustand `tickets` state directly, so the
+    // new ticket appears immediately here too (liveTickets === store.tickets).
     setSubmitted(no)
     setShowNewTicket(false)
     setForm({ subject: '', description: '', severity: 'Medium', channel: 'Web', contactName: '', contactPhone: '', contactEmail: '' })
@@ -247,14 +456,52 @@ export default function CustomerPortalPage() {
 
   const selectedTk = selectedTicket !== null ? liveTickets.find(t => t.id === selectedTicket) : null
 
+  // Small TH/EN switcher — used on login page and in the portal header
+  const LangSwitch = ({ light = false }: { light?: boolean }) => (
+    <button
+      type="button"
+      onClick={toggleLang}
+      title="Switch language / สลับภาษา"
+      className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
+        light
+          ? 'border-white/30 text-white/80 hover:text-white hover:bg-white/10'
+          : 'border-gray-200 text-gray-500 hover:text-[#1B3875] hover:border-[#1B3875]/30 hover:bg-[#1B3875]/5'
+      }`}
+    >
+      <GlobeAltIcon className="w-3.5 h-3.5" />
+      <span className={portalLang === 'th' ? 'opacity-100' : 'opacity-40'}>TH</span>
+      <span className="opacity-30">/</span>
+      <span className={portalLang === 'en' ? 'opacity-100' : 'opacity-40'}>EN</span>
+    </button>
+  )
+
+  // สีที่ใช้ใน gradient ตาม theme
+  const g = isRed
+    ? { c1: '#6B1A1A', c2: '#8B2222', c3: '#A33030', orb: '#8B2222' }
+    : { c1: '#0F2654', c2: '#1B3875', c3: '#2557A7', orb: '#1B3875' }
+
   // ─── LOGIN PAGE ────────────────────────────────────────────────────────────
   if (!session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0F2654] via-[#1B3875] to-[#2557A7] flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ backgroundColor: g.c1 }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: `linear-gradient(135deg, ${g.c1}, ${g.c2}, ${g.c3})`, transition: 'background 0.8s ease' }} />
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-10 left-10 w-72 h-72 bg-[#E84B0F]/8 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-white/4 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#1B3875]/30 rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: `${g.orb}33`, transition: 'background-color 0.8s ease' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl" style={{ backgroundColor: `${g.orb}4D`, transition: 'background-color 0.8s ease' }} />
+        </div>
+
+        {/* Theme toggle — มุมบนขวา */}
+        <div className="absolute top-4 right-4 z-20">
+          <button
+            onClick={() => setTheme(isRed ? 'blue' : 'red')}
+            title={isRed ? 'Switch to Blue theme' : 'Switch to Red theme'}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/30 text-white/80 hover:text-white hover:bg-white/10 transition-colors text-xs font-medium backdrop-blur-sm"
+          >
+            <span className="w-3 h-3 rounded-sm inline-block border border-white/30"
+              style={{ backgroundColor: isRed ? '#1B3875' : '#8B2222' }} />
+            {isRed ? 'Blue' : 'Red'}
+          </button>
         </div>
 
         <div className="relative w-full max-w-sm">
@@ -265,27 +512,30 @@ export default function CustomerPortalPage() {
                 <Image
                   src="/neft-logo.png"
                   alt="NEFT Solution"
-                  width={160} height={54}
-                  className="h-12 w-auto object-contain"
+                  width={190} height={78}
+                  className="h-14 w-auto object-contain"
                   priority
                 />
               </div>
               <div className="w-12 h-0.5 bg-[#E84B0F] mx-auto mb-3 rounded-full" />
               <p className="text-[#0F2654] font-semibold text-sm">Customer Support Portal</p>
-              <p className="text-gray-500 text-xs mt-1">ติดตามสถานะ Case และแจ้งปัญหา</p>
+              <p className="text-gray-500 text-xs mt-1">{tp.tagline}</p>
+              <div className="flex justify-center mt-3">
+                <LangSwitch />
+              </div>
             </div>
 
             <div className="px-8 py-6">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">อีเมลบริษัท</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{tp.emailLabel}</label>
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
                     autoComplete="email"
                     placeholder="your@company.co.th"
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E84B0F]/20 focus:border-[#E84B0F] transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">รหัสผ่าน</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{tp.passwordLabel}</label>
                   <div className="relative">
                     <input
                       type={showPw ? 'text' : 'password'}
@@ -305,7 +555,7 @@ export default function CustomerPortalPage() {
                 <button type="submit" disabled={loginLoading}
                   className="w-full bg-[#E84B0F] hover:bg-[#c93d08] text-white py-2.5 rounded-lg font-semibold text-sm transition-colors shadow-sm disabled:opacity-70 flex items-center justify-center gap-2">
                   {loginLoading && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                  เข้าสู่ระบบ
+                  {tp.loginBtn}
                 </button>
               </form>
 
@@ -313,19 +563,18 @@ export default function CustomerPortalPage() {
               <div className="mt-5 flex items-start gap-2 bg-gray-50 rounded-xl p-3">
                 <ShieldCheckIcon className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-gray-500">
-                  ระบบนี้สำหรับลูกค้า NEFT Solution เท่านั้น
-                  หากยังไม่มี account กรุณาติดต่อ <span className="font-medium text-[#1B3875]">02-096-2377</span> เพื่อขอรับ credentials
+                  {tp.securityNote('02-096-2377')}
                 </p>
               </div>
 
               <p className="text-center text-xs text-gray-400 mt-4">
-                Engineer/Staff?{' '}
-                <a href="/" className="text-[#1B3875] hover:text-[#0F2654] font-medium hover:underline">Staff Login →</a>
+                {tp.staffPrompt}{' '}
+                <a href="/" className="text-[#1B3875] hover:text-[#0F2654] font-medium hover:underline">{tp.staffLogin}</a>
               </p>
             </div>
           </div>
           <p className="text-center text-white/50 text-xs mt-4">
-            © 2026 NEFT Solution Co., Ltd. · 24/7: 02-096-2377 กด 4
+            {tp.footer}
           </p>
         </div>
       </div>
@@ -338,27 +587,31 @@ export default function CustomerPortalPage() {
       <div className="min-h-screen bg-[#F4F6FA]">
         <header className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <Image src="/neft-logo.png" alt="NEFT" width={100} height={34} className="h-7 w-auto object-contain" />
+            <Image src="/neft-logo.png" alt="NEFT" width={130} height={54} className="h-10 w-auto object-contain" />
             <span className="text-gray-300">|</span>
             <span className="text-xs text-gray-500 font-medium">Customer Portal</span>
           </div>
           <div className="flex items-center gap-3">
+            <LangSwitch />
             <span className="text-xs text-gray-500 hidden sm:block">{session.companyName}</span>
             <button onClick={handleLogout} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
-              <ArrowRightOnRectangleIcon className="w-4 h-4" />ออก
+              <ArrowRightOnRectangleIcon className="w-4 h-4" />{tp.logout}
             </button>
           </div>
         </header>
 
         <div className="max-w-2xl mx-auto px-4 py-6">
           <button onClick={() => setSelectedTicket(null)}
-            className="flex items-center gap-1 text-xs text-[#1B3875] hover:text-[#0F2654] mb-4 group">
-            <span className="group-hover:-translate-x-0.5 transition-transform">←</span> กลับรายการ Case
+            className="flex items-center gap-1 text-xs mb-4 group transition-colors"
+            style={{ color: 'var(--brand-blue)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand-navy)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--brand-blue)')}>
+            <span className="group-hover:-translate-x-0.5 transition-transform">←</span> {tp.backToList}
           </button>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Case header strip */}
-            <div className="bg-[#0F2654] px-6 py-5">
+            <div className="px-6 py-5" style={{ backgroundColor: 'var(--brand-navy)', transition: 'background-color 0.3s ease' }}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -366,13 +619,13 @@ export default function CustomerPortalPage() {
                     <button onClick={() => copyNo(selectedTk.no)}
                       className="text-xs text-white/50 hover:text-white flex items-center gap-1 transition-colors">
                       <ClipboardDocumentIcon className="w-3.5 h-3.5" />
-                      {copied === selectedTk.no ? '✓ คัดลอกแล้ว' : 'คัดลอก'}
+                      {copied === selectedTk.no ? tp.copied : tp.copy}
                     </button>
                   </div>
                   <h2 className="text-white font-semibold leading-snug">{selectedTk.subject}</h2>
                 </div>
                 <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex-shrink-0 ${statusStyle(selectedTk.status)}`}>
-                  {STATUS_TH[selectedTk.status] || selectedTk.status}
+                  {statusLabels[selectedTk.status] || selectedTk.status}
                 </span>
               </div>
             </div>
@@ -381,12 +634,12 @@ export default function CustomerPortalPage() {
               {/* Info grid */}
               <div className="grid grid-cols-2 gap-2.5 text-xs">
                 {[
-                  ['ระดับความรุนแรง', <span className={`inline-block px-2 py-0.5 rounded-full font-medium ${sevStyle(selectedTk.severity)}`}>{selectedTk.severity}</span>],
+                  [tp.severity, <span className={`inline-block px-2 py-0.5 rounded-full font-medium ${sevStyle(selectedTk.severity)}`}>{selectedTk.severity}</span>],
                   ['SLA Status', <span className={selectedTk.slaStatus === 'Breached' ? 'font-semibold text-red-600' : selectedTk.slaStatus === 'At Risk' ? 'font-semibold text-orange-600' : 'font-semibold text-green-600'}>{selectedTk.slaStatus}</span>],
-                  ['ช่องทางแจ้งเหตุ', CHANNEL_LABELS[selectedTk.channel || 'Web'] || selectedTk.channel],
-                  ['ผู้รับผิดชอบ', selectedTk.assignedTo],
-                  ['Response Due', selectedTk.responseDue || '-'],
-                  ['Resolution Due', selectedTk.resolutionDue || '-'],
+                  [tp.channel, channelLabels[selectedTk.channel || 'Web'] || selectedTk.channel],
+                  [tp.assignee, selectedTk.assignedTo],
+                  [tp.responseDue, selectedTk.responseDue || '-'],
+                  [tp.resolutionDue, selectedTk.resolutionDue || '-'],
                 ].map(([k, v]) => (
                   <div key={k as string} className="bg-gray-50 rounded-lg p-3">
                     <div className="text-gray-400 mb-0.5">{k}</div>
@@ -397,7 +650,7 @@ export default function CustomerPortalPage() {
 
               {selectedTk.description && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-1.5">รายละเอียดปัญหา</p>
+                  <p className="text-xs font-semibold text-gray-500 mb-1.5">{tp.issueDetail}</p>
                   <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 leading-relaxed">{selectedTk.description}</div>
                 </div>
               )}
@@ -406,27 +659,27 @@ export default function CustomerPortalPage() {
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-xs">
                   <div className="flex items-center gap-2 font-semibold text-orange-800 mb-1.5">
                     <ArrowUpCircleIcon className="w-4 h-4" />
-                    ยกระดับปัญหาไปยังผู้เชี่ยวชาญ
+                    {tp.escalatedTitle}
                   </div>
-                  <div className="text-orange-700">ส่งต่อไปยัง: <span className="font-medium">{selectedTk.escalatedTo}</span></div>
-                  {selectedTk.escalationReason && <div className="text-orange-600 mt-1">เหตุผล: {selectedTk.escalationReason}</div>}
+                  <div className="text-orange-700">{tp.escalatedTo} <span className="font-medium">{selectedTk.escalatedTo}</span></div>
+                  {selectedTk.escalationReason && <div className="text-orange-600 mt-1">{tp.escalatedReason} {selectedTk.escalationReason}</div>}
                 </div>
               )}
 
               {(selectedTk.rootCause || selectedTk.resolution) && (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-xs">
                   <div className="flex items-center gap-2 font-semibold text-green-800 mb-2">
-                    <CheckCircleIcon className="w-4 h-4" />ผลการแก้ไขปัญหา
+                    <CheckCircleIcon className="w-4 h-4" />{tp.resolutionTitle}
                   </div>
-                  {selectedTk.rootCause && <div className="text-green-700 mb-1"><span className="font-medium">Root Cause:</span> {selectedTk.rootCause}</div>}
-                  {selectedTk.resolution && <div className="text-green-700"><span className="font-medium">วิธีแก้ไข:</span> {selectedTk.resolution}</div>}
+                  {selectedTk.rootCause && <div className="text-green-700 mb-1"><span className="font-medium">{tp.rootCause}</span> {selectedTk.rootCause}</div>}
+                  {selectedTk.resolution && <div className="text-green-700"><span className="font-medium">{tp.resolutionMethod}</span> {selectedTk.resolution}</div>}
                 </div>
               )}
 
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <ChatBubbleLeftRightIcon className="w-4 h-4 text-[#1B3875]" />
-                  <p className="text-xs font-semibold text-gray-600">ประวัติการดำเนินการ ({(selectedTk.workLogs || []).length} รายการ)</p>
+                  <p className="text-xs font-semibold text-gray-600">{tp.history((selectedTk.workLogs || []).length)}</p>
                 </div>
                 <div className="space-y-3">
                   {(selectedTk.workLogs || []).map((log: WorkLog, i: number) => (
@@ -438,7 +691,7 @@ export default function CustomerPortalPage() {
                       <div className="flex-1 pb-1">
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
                           <span className={`text-xs px-2 py-0.5 rounded border font-medium ${timelineColor(log.action)}`}>{log.action}</span>
-                          <span className="text-xs text-gray-400">{new Date(log.time).toLocaleString('th-TH')}</span>
+                          <span className="text-xs text-gray-400">{new Date(log.time).toLocaleString(tp.locale)}</span>
                           <span className="text-xs text-gray-400">— {log.user}</span>
                         </div>
                         <p className="text-xs text-gray-600 leading-relaxed">{log.note}</p>
@@ -446,7 +699,7 @@ export default function CustomerPortalPage() {
                     </div>
                   ))}
                   {(!selectedTk.workLogs || selectedTk.workLogs.length === 0) && (
-                    <p className="text-xs text-gray-400 py-2">ยังไม่มีบันทึก</p>
+                    <p className="text-xs text-gray-400 py-2">{tp.noHistory}</p>
                   )}
                 </div>
               </div>
@@ -463,22 +716,34 @@ export default function CustomerPortalPage() {
       {/* Top nav — white bg, logo natural */}
       <header className="bg-white border-b border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Image src="/neft-logo.png" alt="NEFT" width={110} height={37} className="h-8 w-auto object-contain" />
+          <Image src="/neft-logo.png" alt="NEFT" width={130} height={54} className="h-10 w-auto object-contain" />
           <span className="text-gray-200">|</span>
           <span className="text-xs text-gray-500 font-medium hidden sm:block">Customer Support Portal</span>
         </div>
         <div className="flex items-center gap-4">
+          <LangSwitch />
+          {/* Blue/Red Theme Toggle */}
+          <button
+            onClick={() => setTheme(isRed ? 'blue' : 'red')}
+            title={isRed ? 'Switch to Blue theme' : 'Switch to Red theme'}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            style={{ color: isRed ? '#8B1A1A' : '#1B3875' }}
+          >
+            <span className="w-3 h-3 rounded-sm inline-block"
+              style={{ backgroundColor: isRed ? '#1B3875' : '#8B2222' }} />
+            <span className="hidden sm:inline font-medium">{isRed ? 'Blue' : 'Red'}</span>
+          </button>
           <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
             <UserCircleIcon className="w-4 h-4 text-gray-400" />
             <span className="font-medium">{session.companyName}</span>
           </div>
           <a href="tel:020962377" className="hidden md:flex items-center gap-1 text-xs text-[#E84B0F] hover:text-[#c93d08] font-medium">
-            <PhoneIcon className="w-3.5 h-3.5" />02-096-2377 กด 4
+            <PhoneIcon className="w-3.5 h-3.5" />02-096-2377 {portalLang === 'th' ? 'กด 4' : 'ext. 4'}
           </a>
           <button onClick={handleLogout}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors border border-gray-200 hover:border-red-200">
             <ArrowRightOnRectangleIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">ออกจากระบบ</span>
+            <span className="hidden sm:inline">{tp.logoutFull}</span>
           </button>
         </div>
       </header>
@@ -489,30 +754,30 @@ export default function CustomerPortalPage() {
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
             <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-green-800">เปิด Case สำเร็จ!</p>
-              <p className="text-xs text-green-700 mt-0.5">Case Number: <span className="font-mono font-bold">{submitted}</span> — Engineer จะติดต่อกลับภายใน SLA</p>
+              <p className="text-sm font-semibold text-green-800">{tp.successOpened}</p>
+              <p className="text-xs text-green-700 mt-0.5">{tp.successDetail(submitted)}</p>
             </div>
           </div>
         )}
 
         {/* Welcome banner */}
-        <div className="bg-[#0F2654] rounded-2xl p-5 text-white relative overflow-hidden">
+        <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ backgroundColor: 'var(--brand-navy)', transition: 'background-color 0.3s ease' }}>
           <div className="absolute right-0 top-0 w-32 h-32 bg-[#E84B0F]/10 rounded-full -translate-y-8 translate-x-8 blur-2xl" />
           <div className="relative">
-            <h1 className="font-bold text-base mb-0.5">ยินดีต้อนรับ, {session.contactName}</h1>
-            <p className="text-blue-300 text-xs mb-4">{session.companyName}</p>
+            <h1 className="font-bold text-base mb-0.5">{tp.welcome(session.contactName)}</h1>
+            <p className="text-white/60 text-xs mb-4">{session.companyName}</p>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
                 <div className="text-2xl font-bold">{allMyTickets.length}</div>
-                <div className="text-xs text-blue-200 mt-0.5">Case ทั้งหมด</div>
+                <div className="text-xs text-blue-200 mt-0.5">{tp.statTotal}</div>
               </div>
               <div className="bg-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
                 <div className="text-2xl font-bold text-orange-300">{openCount}</div>
-                <div className="text-xs text-blue-200 mt-0.5">กำลังดำเนินการ</div>
+                <div className="text-xs text-blue-200 mt-0.5">{tp.statOpen}</div>
               </div>
               <div className="bg-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
                 <div className="text-2xl font-bold text-green-300">{resolvedCount}</div>
-                <div className="text-xs text-blue-200 mt-0.5">แก้ไขแล้ว</div>
+                <div className="text-xs text-blue-200 mt-0.5">{tp.statResolved}</div>
               </div>
             </div>
           </div>
@@ -523,11 +788,11 @@ export default function CustomerPortalPage() {
           <div className="relative flex-1 min-w-[180px]">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="ค้นหา Case Number หรือหัวข้อ..."
+              placeholder={tp.searchPlaceholder}
               className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none bg-white shadow-sm focus:ring-2 focus:ring-[#1B3875]/10" />
           </div>
           <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
-            {([['all','ทั้งหมด'],['open','กำลังดำเนินการ'],['resolved','แก้ไขแล้ว']] as const).map(([k, label]) => (
+            {([['all',tp.filterAll],['open',tp.filterOpen],['resolved',tp.filterResolved]] as const).map(([k, label]) => (
               <button key={k} onClick={() => setFilterStatus(k)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${filterStatus === k ? 'bg-[#1B3875] text-white' : 'text-gray-500 hover:text-gray-700'}`}>
                 {label}
@@ -536,7 +801,7 @@ export default function CustomerPortalPage() {
           </div>
           <button onClick={() => setShowNewTicket(!showNewTicket)}
             className="flex items-center gap-2 bg-[#E84B0F] hover:bg-[#c93d08] text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-colors flex-shrink-0">
-            <PlusIcon className="w-4 h-4" />แจ้งปัญหาใหม่
+            <PlusIcon className="w-4 h-4" />{tp.newTicket}
           </button>
         </div>
 
@@ -544,18 +809,18 @@ export default function CustomerPortalPage() {
         {showNewTicket && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-[#E84B0F]/8 to-orange-50 px-5 py-4 border-b border-orange-100">
-              <h2 className="font-semibold text-sm text-[#0F2654]">แจ้งปัญหา / เปิด Case ใหม่</h2>
-              <p className="text-xs text-gray-500 mt-0.5">ระบบจะออก Case Number ให้อัตโนมัติ · Engineer ติดต่อกลับตาม SLA</p>
+              <h2 className="font-semibold text-sm text-[#0F2654]">{tp.newTicketTitle}</h2>
+              <p className="text-xs text-gray-500 mt-0.5">{tp.newTicketSub}</p>
             </div>
             <form onSubmit={handleSubmitTicket} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-2">ช่องทางการแจ้ง</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-2">{tp.channelLabel}</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['Phone', 'Web', 'Email'] as const).map(ch => (
                     <button key={ch} type="button" onClick={() => setForm({ ...form, channel: ch })}
                       className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-xs font-medium transition-all ${form.channel === ch ? 'bg-[#0F2654] text-white border-[#0F2654] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:border-[#0F2654]/30'}`}>
                       {ch === 'Phone' ? <PhoneIcon className="w-3.5 h-3.5" /> : ch === 'Email' ? <EnvelopeIcon className="w-3.5 h-3.5" /> : <GlobeAltIcon className="w-3.5 h-3.5" />}
-                      {CHANNEL_LABELS[ch]}
+                      {channelLabels[ch]}
                     </button>
                   ))}
                 </div>
@@ -563,50 +828,47 @@ export default function CustomerPortalPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">หัวข้อปัญหา *</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{tp.subjectLabel}</label>
                   <input required value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
-                    placeholder="อธิบายปัญหาโดยย่อ"
+                    placeholder={tp.subjectPlaceholder}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E84B0F]/20 focus:border-[#E84B0F]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">ระดับความรุนแรง</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{tp.severity}</label>
                   <select value={form.severity} onChange={e => setForm({ ...form, severity: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none">
-                    <option value="Critical">🔴 Critical — ระบบหยุดทำงาน</option>
-                    <option value="High">🟠 High — กระทบการทำงาน</option>
-                    <option value="Medium">🟡 Medium — ทำงานได้บ้าง</option>
-                    <option value="Low">🔵 Low — ปัญหาเล็กน้อย</option>
+                    <option value="Critical">{tp.severitySelect.Critical}</option>
+                    <option value="High">{tp.severitySelect.High}</option>
+                    <option value="Medium">{tp.severitySelect.Medium}</option>
+                    <option value="Low">{tp.severitySelect.Low}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">เบอร์โทรศัพท์ติดต่อ</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{tp.contactPhone}</label>
                   <input value={form.contactPhone} onChange={e => setForm({ ...form, contactPhone: e.target.value })}
                     placeholder="0X-XXXX-XXXX"
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">รายละเอียดปัญหา</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{tp.descLabel}</label>
                   <textarea required rows={4} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-                    placeholder="อธิบายอาการปัญหา ขั้นตอนที่เกิดขึ้น อุปกรณ์ที่เกี่ยวข้อง สิ่งที่ลองแก้ไขแล้ว..."
+                    placeholder={tp.descPlaceholder}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
                 </div>
               </div>
 
               <div className="bg-blue-50 rounded-xl px-4 py-2.5 text-xs text-blue-700">
-                <span className="font-semibold">SLA ของคุณ:</span>{' '}
-                {form.severity === 'Critical' ? 'Response ภายใน 4 ชั่วโมง · Resolution ภายใน 12 ชั่วโมง' :
-                 form.severity === 'High' ? 'Response ภายใน 8 ชั่วโมง · Resolution ภายใน 24 ชั่วโมง' :
-                 form.severity === 'Medium' ? 'Response ภายใน 24 ชั่วโมง · Resolution ภายใน 72 ชั่วโมง' :
-                 'Response ภายใน 48 ชั่วโมง · Resolution ภายใน 5 วันทำการ'}
-                {' · '}กรณีเร่งด่วนโทร <a href="tel:020962377" className="font-bold underline">02-096-2377 กด 4</a>
+                <span className="font-semibold">{tp.slaLabel}</span>{' '}
+                {tp.slaInfo(form.severity)}
+                {' · '}{tp.urgentCall} <a href="tel:020962377" className="font-bold underline">02-096-2377 {portalLang === 'th' ? 'กด 4' : 'ext. 4'}</a>
               </div>
 
               <div className="flex justify-end gap-2 pt-1">
                 <button type="button" onClick={() => setShowNewTicket(false)}
-                  className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">ยกเลิก</button>
+                  className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">{tp.cancel}</button>
                 <button type="submit"
                   className="px-5 py-2.5 bg-[#E84B0F] hover:bg-[#c93d08] text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">
-                  ส่งคำร้อง + รับ Case Number
+                  {tp.submitTicket}
                 </button>
               </div>
             </form>
@@ -616,11 +878,11 @@ export default function CustomerPortalPage() {
         {/* Ticket list */}
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-sm font-semibold text-gray-600">Case ทั้งหมด ({myTickets.length})</h2>
+            <h2 className="text-sm font-semibold text-gray-600">{tp.caseListTitle(myTickets.length)}</h2>
           </div>
           {myTickets.length === 0 ? (
             <div className="bg-white rounded-2xl p-10 text-center border border-gray-100 shadow-sm">
-              <p className="text-gray-400 text-sm">{search ? 'ไม่พบ Case ที่ค้นหา' : 'ยังไม่มี Case — กดปุ่ม "แจ้งปัญหาใหม่" เพื่อเปิด Case'}</p>
+              <p className="text-gray-400 text-sm">{search ? tp.noCaseSearch : tp.noCaseEmpty}</p>
             </div>
           ) : (
             myTickets.map(tk => (
@@ -635,25 +897,25 @@ export default function CustomerPortalPage() {
                         <button onClick={e => { e.stopPropagation(); copyNo(tk.no) }}
                           className="text-xs text-[#1B3875] hover:text-[#0F2654] flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <ClipboardDocumentIcon className="w-3 h-3" />
-                          {copied === tk.no ? '✓' : 'คัดลอก'}
+                          {copied === tk.no ? '✓' : tp.copy}
                         </button>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sevStyle(tk.severity)}`}>{tk.severity}</span>
                         {(tk.escalationLevel || 0) > 0 && (
                           <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-0.5">
-                            <ArrowUpCircleIcon className="w-3 h-3" />ยกระดับแล้ว
+                            <ArrowUpCircleIcon className="w-3 h-3" />{tp.escalatedBadge}
                           </span>
                         )}
                       </div>
                       <p className="text-sm font-semibold text-gray-800 truncate">{tk.subject}</p>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
-                        <span><ClockIcon className="w-3 h-3 inline mr-0.5" />{new Date(tk.createdAt).toLocaleDateString('th-TH')}</span>
-                        <span>ผู้รับผิดชอบ: <span className="text-gray-600">{tk.assignedTo}</span></span>
-                        <span>{(tk.workLogs || []).length} บันทึก</span>
+                        <span><ClockIcon className="w-3 h-3 inline mr-0.5" />{new Date(tk.createdAt).toLocaleDateString(tp.locale)}</span>
+                        <span>{tp.assignee}: <span className="text-gray-600">{tk.assignedTo}</span></span>
+                        <span>{(tk.workLogs || []).length} {tp.logEntries}</span>
                       </div>
                     </div>
                     <div className="flex-shrink-0 text-right">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${statusStyle(tk.status)}`}>
-                        {STATUS_TH[tk.status] || tk.status}
+                        {statusLabels[tk.status] || tk.status}
                       </span>
                       {tk.slaStatus === 'Breached' && (
                         <div className="text-xs text-red-500 mt-1 flex items-center gap-0.5 justify-end">
@@ -665,7 +927,7 @@ export default function CustomerPortalPage() {
                 </div>
                 {tk.responseDue && (
                   <div className="border-t border-gray-50 px-4 py-2 text-xs text-gray-400 flex gap-4">
-                    <span>Response due: <span className="text-gray-600 font-medium">{tk.responseDue}</span></span>
+                    <span>{tp.responseDue}: <span className="text-gray-600 font-medium">{tk.responseDue}</span></span>
                   </div>
                 )}
               </div>
@@ -674,8 +936,8 @@ export default function CustomerPortalPage() {
         </div>
 
         <div className="text-center text-xs text-gray-400 py-4 border-t border-gray-200">
-          <p>ต้องการความช่วยเหลือด่วน? โทร <a href="tel:020962377" className="text-[#E84B0F] font-semibold hover:underline">02-096-2377 กด 4</a> (24/7)</p>
-          <p className="mt-1">© 2026 NEFT Solution Co., Ltd. · <a href="/" className="hover:underline text-gray-400">Staff Login</a></p>
+          <p>{tp.helpFooter} <a href="tel:020962377" className="text-[#E84B0F] font-semibold hover:underline">02-096-2377 {portalLang === 'th' ? 'กด 4' : 'ext. 4'}</a> {tp.available247}</p>
+          <p className="mt-1">{tp.footer.replace('· 24/7: 02-096-2377 กด 4', '')} · <a href="/" className="hover:underline text-gray-400">{tp.staffLogin.replace(' →','')}</a></p>
         </div>
       </div>
     </div>

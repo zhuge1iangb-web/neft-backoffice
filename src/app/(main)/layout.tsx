@@ -71,7 +71,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const isLoading = hasSupabase && !initialized
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F4F6FA] dark:bg-gray-950 transition-colors">
+    <div className="flex h-screen overflow-hidden bg-[#F4F6FA] transition-colors">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header title={title} />
@@ -79,8 +79,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1B3875] mx-auto mb-4" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--brand-navy)' }} />
+                <p className="text-sm text-gray-500">
                   {translations[useAppStore.getState().lang].common.loading}
                 </p>
               </div>

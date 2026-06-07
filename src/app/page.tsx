@@ -24,7 +24,7 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true); setError('')
     await new Promise(r => setTimeout(r, 600))
-    const ok = login(username, password)
+    const ok = await login(username, password)
     if (ok) router.push('/dashboard')
     else setError(t.login.loginFailed)
     setLoading(false)
@@ -44,7 +44,7 @@ export default function LoginPage() {
           {/* Header — white bg so logo shows naturally without invert */}
           <div className="bg-white px-8 pt-8 pb-5 text-center border-b border-gray-100">
             <div className="flex justify-center mb-4">
-              <Image src="/neft-logo.png" alt="NEFT Solution" width={160} height={54} className="h-12 w-auto object-contain" priority />
+              <Image src="/neft-logo.png" alt="NEFT Solution" width={190} height={78} className="h-14 w-auto object-contain" priority />
             </div>
             <div className="w-14 h-0.5 bg-[#E84B0F] mx-auto mb-3 rounded-full" />
             <p className="text-[#0F2654] font-semibold text-sm">{t.login.subtitle}</p>

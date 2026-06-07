@@ -84,11 +84,28 @@ async function uploadFile(file: File, bucket: string, folder: string): Promise<s
 
 export default function ProjectsPage() {
   const {
-    lang, projects, users, customers, cmSlaOptions, projectNameOptions,
+    lang, projects: allProjects, users, customers, cmSlaOptions, projectNameOptions,
     addProject, updateProject, deleteProject, addProjectWorkLog, generateProjectNo,
-    currentUser,
+    currentUser, opportunities,
   } = useAppStore()
   const t = translations[lang]
+
+  // Sales rep isolation: Sales role เห็นเฉพาะโครงการที่เชื่อมกับ opportunity ของตัวเอง
+  // หรือโครงการที่ตัวเองเป็น PM
+  const isSalesRep = currentUser?.role === 'Sales'
+  const projects = isSalesRep
+    ? allProjects.filter(p => {
+        // กรณีมาจาก Won opportunity
+        if (p.sourceOppId) {
+          const opp = opportunities.find(o => o.id === p.sourceOppId)
+          if (opp && opp.owner === currentUser?.name) return true
+        }
+        // กรณีเป็น PM โครงการนั้น
+        if (p.pmUserId && p.pmUserId === currentUser?.id) return true
+        if (p.pm && p.pm === currentUser?.name) return true
+        return false
+      })
+    : allProjects
 
   // List view state
   const [search, setSearch] = useState('')
@@ -396,6 +413,14 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-4">
+      {/* Sales rep isolation banner */}
+      {isSalesRep && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-blue-700">
+          <span className="text-base">👤</span>
+          <span>แสดงเฉพาะโครงการที่คุณรับผิดชอบ ({projects.length} โครงการ)</span>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {['In Progress', 'Planning', 'Delayed', 'On Hold', 'Completed'].map(s => {

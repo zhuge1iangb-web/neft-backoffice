@@ -180,11 +180,38 @@ export default function ProjectsPage() {
   const detailProj = showDetail !== null ? projects.find(p => p.id === showDetail) : null
 
   // เมื่อเปิด detail modal ให้ reset dismiss banner ถ้า project เปลี่ยน
+  // และเปิด editMode ทันทีโดย default พร้อมดึงข้อมูลจาก project มาใส่ editForm
   useEffect(() => {
     if (showDetail !== null) {
       setDetailTab('overview')
-      setEditMode(false)
-      setEditForm({})
+      const proj = projects.find(p => p.id === showDetail)
+      if (proj) {
+        // เปิด edit mode ทันที — ไม่ต้องกดแก้ไขก่อน
+        setEditMode(true)
+        setEditForm({
+          name: proj.name,
+          pm: proj.pm,
+          pmUserId: proj.pmUserId,
+          type: proj.type,
+          contractValue: proj.contractValue,
+          contractStart: proj.contractStart,
+          contractEnd: proj.contractEnd,
+          deliveryDays: proj.deliveryDays,
+          workStart: proj.workStart,
+          workEnd: proj.workEnd,
+          cmSlaId: proj.cmSlaId,
+          projectDescription: proj.projectDescription,
+          pmFrequencyMonths: proj.pmFrequencyMonths,
+          pmFirstDate: proj.pmFirstDate,
+          pmLastDate: proj.pmLastDate,
+          pmTotalCount: proj.pmTotalCount,
+          customerId: proj.customerId,
+          status: proj.status,
+        })
+      } else {
+        setEditMode(false)
+        setEditForm({})
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDetail])
@@ -329,14 +356,27 @@ export default function ProjectsPage() {
   // ---- Save edit ----
   const handleSaveEdit = () => {
     if (!detailProj) return
-    // ถ้า contractStart หรือ deliveryDays เปลี่ยน ให้คำนวณ contractEnd ใหม่
     const updatedEdit = { ...editForm }
+    // คำนวณ contractEnd อัตโนมัติ
     if (editContractEndPreview) {
       updatedEdit.contractEnd = editContractEndPreview
     }
+    // คำนวณ pmLastDate อัตโนมัติ
+    const computedPmLast = calcPmLastDate(
+      editForm.pmFirstDate as string,
+      String(editForm.pmTotalCount || ''),
+      String(editForm.pmFrequencyMonths || '')
+    )
+    if (computedPmLast) {
+      updatedEdit.pmLastDate = computedPmLast
+    }
+    // sync customerName จาก customerId
+    if (editForm.customerId) {
+      const c = customers.find(c => c.id === +(editForm.customerId as number))
+      if (c) updatedEdit.customerName = c.name
+    }
     updateProject(detailProj.id, updatedEdit)
-    setEditMode(false)
-    setEditForm({})
+    // ไม่ reset editMode — ให้ยังคงแก้ไขได้ต่อ
   }
 
   const excelHeaders = ['รหัส', 'ชื่อโครงการ', 'ลูกค้า', 'PM', 'สถานะ', 'ความคืบหน้า', 'มูลค่าสัญญา', 'เริ่มสัญญา', 'สิ้นสุดสัญญา']
@@ -763,73 +803,47 @@ export default function ProjectsPage() {
               ))}
             </div>
 
-            {/* ---- Overview Tab ---- */}
+            {/* ---- Overview Tab — always editable (inline edit by default) ---- */}
             {detailTab === 'overview' && (
               <div className="space-y-4">
-                {!editMode ? (
-                  <>
-                    <div className="grid grid-cols-3 gap-3 text-sm">
-                      {[
-                        ['ลูกค้า', detailProj.customerName],
-                        ['Project Manager', detailProj.pm || '-'],
-                        ['ประเภท', detailProj.type],
-                        ['มูลค่าสัญญา', formatCurrency(detailProj.contractValue)],
-                        ['วันเริ่มต้นสัญญา', detailProj.contractStart ? fmtDateTH(detailProj.contractStart) : '-'],
-                        ['วันสิ้นสุดสัญญา', detailProj.contractEnd ? fmtDateTH(detailProj.contractEnd) : '-'],
-                        ['ระยะส่งมอบ', detailProj.deliveryDays ? `${detailProj.deliveryDays} วัน` : '-'],
-                        ['วันเริ่มงาน', detailProj.workStart ? fmtDateTH(detailProj.workStart) : '-'],
-                        ['วันสิ้นสุดงาน', detailProj.workEnd ? fmtDateTH(detailProj.workEnd) : '-'],
-                        ['CM SLA', cmSlaOptions.find(s => s.id === detailProj.cmSlaId)?.name || '-'],
-                        ['อัปเดตล่าสุด', detailProj.latestUpdate || '-'],
-                      ].map(([k, v]) => (
-                        <div key={k as string} className="bg-gray-50 rounded-lg p-2.5">
-                          <div className="text-xs text-gray-400">{k}</div>
-                          <div className="text-sm font-medium text-gray-700 mt-0.5 break-words">{v}</div>
-                        </div>
-                      ))}
-                    </div>
-                    {detailProj.projectDescription && (
-                      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-gray-700">
-                        <div className="text-xs text-gray-400 mb-1">รายละเอียดโครงการ</div>
-                        {detailProj.projectDescription}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => {
-                        setEditMode(true)
-                        setEditForm({
-                          name: detailProj.name, pm: detailProj.pm,
-                          pmUserId: detailProj.pmUserId, type: detailProj.type,
-                          contractValue: detailProj.contractValue,
-                          contractStart: detailProj.contractStart,
-                          contractEnd: detailProj.contractEnd,
-                          deliveryDays: detailProj.deliveryDays,
-                          workStart: detailProj.workStart,
-                          workEnd: detailProj.workEnd,
-                          cmSlaId: detailProj.cmSlaId,
-                          projectDescription: detailProj.projectDescription,
-                        })
-                      }}>แก้ไขข้อมูล</Button>
-                      <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50"
-                        onClick={() => { setShowDetail(null); setShowDeleteConfirm(detailProj.id) }}>
-                        ลบโครงการ
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  /* Edit mode */
-                  <div className="space-y-4">
+                {/* Info banner: ดึงข้อมูลจาก Sales Won */}
+                {detailProj.sourceOppId && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 flex items-center gap-2 text-xs text-green-700">
+                    <span className="text-green-500">✓</span>
+                    ข้อมูลดึงจากโอกาสทางการขาย (Sales Won) — แก้ไขได้ทันที แล้วกด บันทึก
+                  </div>
+                )}
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 text-xs text-blue-600 flex items-center gap-1.5">
+                  <span>✏️</span> กรอก/แก้ไขรายละเอียดได้ทันที — กด <strong>บันทึกข้อมูล</strong> เพื่ออัปเดต
+                </div>
+
+                <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+                  {/* Section: ข้อมูลพื้นฐาน */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-[#1B3875] uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <InformationCircleIcon className="w-3.5 h-3.5" /> ข้อมูลโครงการ
+                    </h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-600 mb-1">ชื่อโครงการ</label>
                         <input type="text" value={(editForm.name as string) || ''}
                           onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3875]/20" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Project Manager <span className="text-red-500">*</span>
-                        </label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">ลูกค้า</label>
+                        <select value={(editForm.customerId as number) || ''}
+                          onChange={e => {
+                            const c = customers.find(c => c.id === +e.target.value)
+                            setEditForm({ ...editForm, customerId: +e.target.value })
+                          }}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+                          <option value="">-- เลือกลูกค้า --</option>
+                          {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Project Manager <span className="text-red-500">*</span></label>
                         <select value={(editForm.pmUserId as number) || ''}
                           onChange={e => {
                             const u = users.find(u => u.id === +e.target.value)
@@ -841,11 +855,48 @@ export default function ProjectsPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">มูลค่าสัญญา (฿)</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">ประเภทโครงการ</label>
+                        <select value={(editForm.type as string) || 'Implementation'}
+                          onChange={e => setEditForm({ ...editForm, type: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+                          {['Implementation', 'Infrastructure', 'Software', 'Security', 'Consulting'].map(tt => (
+                            <option key={tt} value={tt}>{tt}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          มูลค่าสัญญา (฿)
+                          {detailProj.sourceOppId && <span className="text-green-600 font-normal ml-1">— ดึงจาก Sales</span>}
+                        </label>
                         <input type="number" value={(editForm.contractValue as number) || 0}
                           onChange={e => setEditForm({ ...editForm, contractValue: +e.target.value })}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
                       </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">สถานะโครงการ</label>
+                        <select value={(editForm.status as string) || 'Planning'}
+                          onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+                          {STATUS_SEQUENCE.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">รายละเอียดโครงการ</label>
+                        <textarea value={(editForm.projectDescription as string) || ''}
+                          onChange={e => setEditForm({ ...editForm, projectDescription: e.target.value })}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: วันที่สัญญา */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-[#1B3875] uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <ClipboardDocumentListIcon className="w-3.5 h-3.5" /> วันที่สัญญา &amp; วันทำงาน
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">วันเริ่มต้นสัญญา</label>
                         <input type="date" value={(editForm.contractStart as string) || ''}
@@ -877,7 +928,29 @@ export default function ProjectsPage() {
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
                         )}
                       </div>
+                      <div />
                       <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">วันเริ่มงานจริง</label>
+                        <input type="date" value={(editForm.workStart as string) || ''}
+                          onChange={e => setEditForm({ ...editForm, workStart: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">วันสิ้นสุดงาน (คาดการณ์)</label>
+                        <input type="date" value={(editForm.workEnd as string) || ''}
+                          onChange={e => setEditForm({ ...editForm, workEnd: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: CM SLA & PM Schedule */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-[#1B3875] uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <WrenchScrewdriverIcon className="w-3.5 h-3.5" /> CM SLA &amp; กำหนด PM
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-600 mb-1">CM SLA</label>
                         <select value={(editForm.cmSlaId as number) || ''}
                           onChange={e => setEditForm({ ...editForm, cmSlaId: +e.target.value })}
@@ -888,28 +961,101 @@ export default function ProjectsPage() {
                           ))}
                         </select>
                       </div>
-                      <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">รายละเอียดโครงการ</label>
-                        <textarea value={(editForm.projectDescription as string) || ''}
-                          onChange={e => setEditForm({ ...editForm, projectDescription: e.target.value })}
-                          rows={2}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">ความถี่ PM (เดือน/ครั้ง)</label>
+                        <input type="number" value={(editForm.pmFrequencyMonths as number) || ''}
+                          onChange={e => setEditForm({ ...editForm, pmFrequencyMonths: +e.target.value || null })}
+                          placeholder="เช่น 3"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">จำนวนครั้ง PM</label>
+                        <input type="number" value={(editForm.pmTotalCount as number) || ''}
+                          onChange={e => setEditForm({ ...editForm, pmTotalCount: +e.target.value || null })}
+                          placeholder="เช่น 4"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">วัน PM ครั้งแรก</label>
+                        <input type="date" value={(editForm.pmFirstDate as string) || ''}
+                          onChange={e => setEditForm({ ...editForm, pmFirstDate: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">วัน PM ครั้งสุดท้าย (auto)</label>
+                        <div className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                          calcPmLastDate(editForm.pmFirstDate as string, String(editForm.pmTotalCount || ''), String(editForm.pmFrequencyMonths || ''))
+                            ? 'border-green-200 bg-green-50 text-green-700'
+                            : 'border-gray-100 bg-gray-50 text-gray-400'
+                        }`}>
+                          {calcPmLastDate(editForm.pmFirstDate as string, String(editForm.pmTotalCount || ''), String(editForm.pmFrequencyMonths || ''))
+                            ? fmtDateTH(calcPmLastDate(editForm.pmFirstDate as string, String(editForm.pmTotalCount || ''), String(editForm.pmFrequencyMonths || '')))
+                            : 'กรอกข้อมูล PM ก่อน'}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveEdit}>บันทึก</Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditMode(false); setEditForm({}) }}>ยกเลิก</Button>
-                    </div>
                   </div>
-                )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-3 border-t border-gray-100">
+                  <Button size="sm" onClick={handleSaveEdit} disabled={!editForm.pmUserId}>
+                    💾 บันทึกข้อมูล
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50"
+                    onClick={() => { setShowDetail(null); setShowDeleteConfirm(detailProj.id) }}>
+                    ลบโครงการ
+                  </Button>
+                </div>
               </div>
             )}
 
-            {/* ---- Work Log Tab ---- */}
+            {/* ---- Work Log Tab — เพิ่มได้ทันที inline ---- */}
             {detailTab === 'worklog' && (
               <div className="space-y-3">
-                <Button icon={<PlusIcon className="w-4 h-4" />} onClick={() => setShowWorkLogModal(true)} size="sm" className="w-full">
-                  เพิ่ม Work Log / อัปเดตสถานะ
+                {/* Inline quick add worklog */}
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-2">
+                  <div className="text-xs font-semibold text-blue-700 mb-1">✏️ เพิ่ม Work Log ใหม่</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-0.5">ประเภทงาน</label>
+                      <select value={wlForm.actionType} onChange={e => setWlForm({ ...wlForm, actionType: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none bg-white">
+                        {ACTION_TYPES.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-0.5">ผู้ปฏิบัติงาน <span className="text-red-500">*</span></label>
+                      <select value={wlForm.performedByUserId} onChange={e => setWlForm({ ...wlForm, performedByUserId: e.target.value })}
+                        className={`w-full px-2 py-1.5 border rounded-lg text-xs focus:outline-none bg-white ${!wlForm.performedByUserId ? 'border-red-200' : 'border-gray-200'}`}>
+                        <option value="">-- เลือก --</option>
+                        {pmUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs text-gray-600 mb-0.5">สถานะโครงการหลังอัปเดต</label>
+                      <select value={wlForm.status} onChange={e => setWlForm({ ...wlForm, status: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none bg-white">
+                        {STATUS_SEQUENCE.map(s => <option key={s} value={s}>{s} ({STATUS_PROGRESS[s]}%)</option>)}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs text-gray-600 mb-0.5">รายละเอียด <span className="text-red-500">*</span></label>
+                      <textarea value={wlForm.description} onChange={e => setWlForm({ ...wlForm, description: e.target.value })}
+                        rows={2} placeholder="ระบุสิ่งที่ดำเนินการ..."
+                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none resize-none bg-white" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Button size="sm" onClick={handleAddWorkLog} disabled={!wlForm.description || !wlForm.performedByUserId || wlUploading}>
+                      {wlUploading ? 'กำลังบันทึก...' : '💾 บันทึก Work Log'}
+                    </Button>
+                    <button type="button" onClick={() => setShowWorkLogModal(true)}
+                      className="text-xs text-blue-600 hover:underline">+ แนบไฟล์</button>
+                  </div>
+                </div>
+                <Button icon={<PlusIcon className="w-4 h-4" />} onClick={() => setShowWorkLogModal(true)} size="sm" variant="outline" className="w-full">
+                  เพิ่ม Work Log พร้อมไฟล์แนบ
                 </Button>
 
                 {/* Timeline */}

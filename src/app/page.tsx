@@ -52,13 +52,15 @@ export default function LoginPage() {
         transition: 'background 0.8s ease',
       }} />
 
-      {/* Floating glowing orbs */}
-      <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ background: g.o1, animation: 'float1 8s ease-in-out infinite', transition: 'background 0.8s ease' }} />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full opacity-15 blur-3xl pointer-events-none"
-        style={{ background: g.o2, animation: 'float2 10s ease-in-out infinite' }} />
-      <div className="absolute top-3/4 left-1/2 w-64 h-64 rounded-full opacity-10 blur-3xl pointer-events-none"
-        style={{ background: g.o3, animation: 'float3 7s ease-in-out infinite', transition: 'background 0.8s ease' }} />
+      {/* Floating blobs — same layout as Customer Portal */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-72 h-72 bg-[#E84B0F]/8 rounded-full blur-3xl"
+          style={{ animation: 'float1 8s ease-in-out infinite' }} />
+        <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full blur-3xl"
+          style={{ backgroundColor: `${g.o1}33`, transition: 'background-color 0.8s ease', animation: 'float2 10s ease-in-out infinite' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl"
+          style={{ backgroundColor: `${g.o1}4D`, transition: 'background-color 0.8s ease', animation: 'float3 7s ease-in-out infinite' }} />
+      </div>
 
       {/* Grid overlay */}
       <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
@@ -84,8 +86,8 @@ export default function LoginPage() {
           70% { transform: translate(25px, -20px) scale(0.92); }
         }
         @keyframes float3 {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(20px, -30px); }
+          0%, 100% { transform: translate(-50%, -50%); }
+          50% { transform: translate(calc(-50% + 20px), calc(-50% - 30px)); }
         }
       `}</style>
 

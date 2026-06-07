@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAppStore } from '@/store'
 import { translations } from '@/lib/translations'
+import { canAccessModule, type ModuleKey } from '@/lib/permissions'
 import { clsx } from 'clsx'
 import {
   HomeIcon, BriefcaseIcon, FolderOpenIcon, CurrencyDollarIcon,
@@ -13,36 +14,40 @@ import {
 import { useState } from 'react'
 import Image from 'next/image'
 
-const navItems = (t: typeof translations.th) => [
-  { href: '/dashboard',      label: t.nav.dashboard,      icon: HomeIcon },
-  { href: '/sales',          label: t.nav.sales,          icon: BriefcaseIcon },
-  { href: '/projects',       label: t.nav.projects,       icon: FolderOpenIcon },
-  { href: '/finance',        label: t.nav.finance,        icon: CurrencyDollarIcon },
-  { href: '/service',        label: t.nav.service,        icon: WrenchScrewdriverIcon },
-  { href: '/purchasing',     label: t.nav.purchasing,     icon: ShoppingCartIcon },
-  { href: '/inventory',      label: t.nav.inventory,      icon: ArchiveBoxIcon },
-  { href: '/reports',        label: (t.nav as any).reports ?? 'รายงาน', icon: ChartBarIcon },
-  { href: '/notifications',  label: t.nav.notifications,  icon: BellIcon, badge: true },
-  { href: '/users',          label: t.nav.users,          icon: UsersIcon },
-  { href: '/master',         label: t.nav.master,         icon: CircleStackIcon },
+const navItems = (t: typeof translations.th): { href: string; label: string; icon: any; badge?: boolean; module: ModuleKey }[] => [
+  { href: '/dashboard',      label: t.nav.dashboard,      icon: HomeIcon,               module: 'dashboard' },
+  { href: '/sales',          label: t.nav.sales,          icon: BriefcaseIcon,          module: 'sales' },
+  { href: '/projects',       label: t.nav.projects,       icon: FolderOpenIcon,         module: 'projects' },
+  { href: '/finance',        label: t.nav.finance,        icon: CurrencyDollarIcon,     module: 'finance' },
+  { href: '/service',        label: t.nav.service,        icon: WrenchScrewdriverIcon,  module: 'service' },
+  { href: '/purchasing',     label: t.nav.purchasing,     icon: ShoppingCartIcon,       module: 'purchasing' },
+  { href: '/inventory',      label: t.nav.inventory,      icon: ArchiveBoxIcon,         module: 'inventory' },
+  { href: '/reports',        label: (t.nav as any).reports ?? 'รายงาน', icon: ChartBarIcon, module: 'reports' },
+  { href: '/notifications',  label: t.nav.notifications,  icon: BellIcon, badge: true,  module: 'notifications' },
+  { href: '/users',          label: t.nav.users,          icon: UsersIcon,              module: 'users' },
+  { href: '/master',         label: t.nav.master,         icon: CircleStackIcon,        module: 'master' },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { lang, logout, notifications } = useAppStore()
+  const { lang, logout, notifications, currentUser } = useAppStore()
   const t = translations[lang]
   const [collapsed, setCollapsed] = useState(false)
   const unreadCount = notifications.filter(n => !n.read).length
+  const visibleNavItems = navItems(t).filter(item => canAccessModule(currentUser?.role, item.module))
 
   const handleLogout = () => { logout(); router.push('/') }
 
   return (
-    <aside className={clsx(
-      'flex flex-col h-screen bg-[#0F2654] text-white transition-all duration-300 flex-shrink-0',
-      collapsed ? 'w-16' : 'w-60'
-    )}>
-      {/* Logo bar — white background so logo sits flush, no pill needed */}
+    <aside
+      className={clsx(
+        'flex flex-col h-screen text-white transition-all duration-300 flex-shrink-0',
+        collapsed ? 'w-16' : 'w-60'
+      )}
+      style={{ backgroundColor: 'var(--brand-navy)' }}
+    >
+      {/* Logo bar — white background so logo sits flush */}
       <div className={clsx(
         'flex items-center justify-between px-3 py-3 bg-white border-b border-gray-100 flex-shrink-0',
         collapsed ? 'px-2' : 'px-4'
@@ -52,8 +57,8 @@ export default function Sidebar() {
             <Image
               src="/neft-logo.png"
               alt="NEFT Solution"
-              width={108} height={36}
-              className="h-8 w-auto object-contain"
+              width={130} height={54}
+              className="h-10 w-auto object-contain"
               priority
             />
           </div>
@@ -68,14 +73,17 @@ export default function Sidebar() {
             />
           </div>
         )}
-        <button onClick={() => setCollapsed(!collapsed)} className="text-gray-400 hover:text-[#0F2654] p-1 rounded flex-shrink-0 ml-1 transition-colors">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="text-gray-400 hover:text-gray-700 p-1 rounded flex-shrink-0 ml-1 transition-colors"
+        >
           {collapsed ? <ChevronDoubleRightIcon className="w-3.5 h-3.5" /> : <ChevronDoubleLeftIcon className="w-3.5 h-3.5" />}
         </button>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden">
-        {navItems(t).map(({ href, label, icon: Icon, badge }) => {
+        {visibleNavItems.map(({ href, label, icon: Icon, badge }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link key={href} href={href}
@@ -83,7 +91,7 @@ export default function Sidebar() {
                 'flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl text-sm transition-all relative',
                 active
                   ? 'bg-white/15 text-white font-medium shadow-sm border border-white/10'
-                  : 'text-blue-200/80 hover:bg-white/8 hover:text-white'
+                  : 'text-white/70 hover:bg-white/10 hover:text-white'
               )}
             >
               <div className="relative flex-shrink-0">
@@ -105,7 +113,7 @@ export default function Sidebar() {
         {/* Customer Portal link */}
         <Link href="/customer-portal" target="_blank"
           className={clsx(
-            'flex items-center gap-3 w-full px-2 py-2 text-sm text-blue-300 hover:text-white hover:bg-white/10 rounded-lg transition-all',
+            'flex items-center gap-3 w-full px-2 py-2 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-all',
             collapsed && 'justify-center'
           )}
         >

@@ -484,12 +484,44 @@ export default function CustomerPortalPage() {
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ backgroundColor: g.c1 }}>
-        <div className="absolute inset-0 pointer-events-none" style={{ background: `linear-gradient(135deg, ${g.c1}, ${g.c2}, ${g.c3})`, transition: 'background 0.8s ease' }} />
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: `linear-gradient(135deg, ${g.c1}, ${g.c2}, ${g.c3}, ${g.c2}, ${g.c1})`,
+          backgroundSize: '400% 400%',
+          animation: 'gradientShift 12s ease infinite',
+          transition: 'background 0.8s ease',
+        }} />
+        {/* Floating blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-[#E84B0F]/8 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full blur-3xl" style={{ backgroundColor: `${g.orb}33`, transition: 'background-color 0.8s ease' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl" style={{ backgroundColor: `${g.orb}4D`, transition: 'background-color 0.8s ease' }} />
+          <div className="absolute top-10 left-10 w-72 h-72 bg-[#E84B0F]/8 rounded-full blur-3xl"
+            style={{ animation: 'float1 8s ease-in-out infinite' }} />
+          <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full blur-3xl"
+            style={{ backgroundColor: `${g.orb}33`, transition: 'background-color 0.8s ease', animation: 'float2 10s ease-in-out infinite' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-3xl"
+            style={{ backgroundColor: `${g.orb}4D`, transition: 'background-color 0.8s ease', animation: 'float3 7s ease-in-out infinite' }} />
         </div>
+        {/* CSS keyframes */}
+        <style>{`
+          @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          @keyframes float1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -40px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+          }
+          @keyframes float2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            40% { transform: translate(-40px, 30px) scale(1.08); }
+            70% { transform: translate(25px, -20px) scale(0.92); }
+          }
+          @keyframes float3 {
+            0%, 100% { transform: translate(-50%, -50%); }
+            50% { transform: translate(calc(-50% + 20px), calc(-50% - 30px)); }
+          }
+        `}</style>
 
         {/* Theme toggle — มุมบนขวา */}
         <div className="absolute top-4 right-4 z-20">

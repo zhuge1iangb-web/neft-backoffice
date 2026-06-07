@@ -31,17 +31,55 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0F2654] via-[#1B3875] to-[#2557A7] flex items-center justify-center p-4">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#E84B0F] rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
+      {/* === Animated Gradient Background === */}
+      <div className="absolute inset-0 animate-gradient-bg" style={{
+        background: 'linear-gradient(135deg, #0F2654, #1B3875, #2557A7, #1B3875, #0F2654)',
+        backgroundSize: '400% 400%',
+        animation: 'gradientShift 12s ease infinite',
+      }} />
 
-      <div className="relative w-full max-w-sm">
+      {/* Floating glowing orbs */}
+      <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
+        style={{ background: '#2557A7', animation: 'float1 8s ease-in-out infinite' }} />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full opacity-15 blur-3xl pointer-events-none"
+        style={{ background: '#E84B0F', animation: 'float2 10s ease-in-out infinite' }} />
+      <div className="absolute top-3/4 left-1/2 w-64 h-64 rounded-full opacity-10 blur-3xl pointer-events-none"
+        style={{ background: '#4A90D9', animation: 'float3 7s ease-in-out infinite' }} />
+
+      {/* Grid overlay */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
+        backgroundSize: '60px 60px',
+      }} />
+
+      {/* CSS keyframes injected inline */}
+      <style>{`
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes float1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -40px) scale(1.05); }
+          66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          40% { transform: translate(-40px, 30px) scale(1.08); }
+          70% { transform: translate(25px, -20px) scale(0.92); }
+        }
+        @keyframes float3 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(20px, -30px); }
+        }
+      `}</style>
+
+      <div className="relative z-10 w-full max-w-sm">
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Header — white bg so logo shows naturally without invert */}
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/20">
+          {/* Header */}
           <div className="bg-white px-8 pt-8 pb-5 text-center border-b border-gray-100">
             <div className="flex justify-center mb-4">
               <Image src="/neft-logo.png" alt="NEFT Solution" width={190} height={78} className="h-14 w-auto object-contain" priority />
@@ -100,9 +138,9 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center mt-4 space-y-1">
-          <p className="text-white/40 text-xs">© 2026 NEFT Solution Co., Ltd.</p>
+          <p className="text-white/50 text-xs">© 2026 NEFT Solution Co., Ltd.</p>
           <a href="/customer-portal" className="inline-block text-blue-300 hover:text-white text-xs underline underline-offset-2 transition-colors">
-            🏥 ลูกค้า / Customer Portal →
+            {lang === 'th' ? '🏥 ลูกค้า / Customer Portal →' : '🏥 Customer Portal →'}
           </a>
         </div>
       </div>

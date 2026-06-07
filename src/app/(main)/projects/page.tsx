@@ -115,6 +115,7 @@ export default function ProjectsPage() {
     contractStart: '', deliveryDays: '',
     pmFrequencyMonths: '', pmFirstDate: '', pmLastDate: '', pmTotalCount: '',
     cmSlaId: '',
+    sourceOppId: null as number | null,  // ถ้ามาจาก won opportunity
   }
   const [form, setForm] = useState(emptyForm)
 
@@ -300,7 +301,8 @@ export default function ProjectsPage() {
       performedById: performer?.id || currentUser?.id || null,
       createdAt: new Date().toISOString(),
     }
-    addProjectWorkLog(log)
+    // รอ addProjectWorkLog เสร็จก่อน (มีการ refetch จาก DB) แล้วค่อยปิด modal
+    await addProjectWorkLog(log)
     setShowWorkLogModal(false)
     setWlForm({ actionType: ACTION_TYPES[0], description: '', status: 'In Progress', performedByUserId: String(currentUser?.id || ''), attachmentFiles: [] })
     setWlUploading(false)
@@ -462,24 +464,30 @@ export default function ProjectsPage() {
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">
                   ชื่อโครงการ <span className="text-red-500">*</span>
-                  <span className="text-gray-400 font-normal ml-1">— เลือกจาก Master Data หรือพิมพ์ใหม่</span>
+                  {form.sourceOppId
+                    ? <span className="text-green-600 font-normal ml-1">— ดึงจากโอกาสขาย (ล็อกชื่อ)</span>
+                    : <span className="text-gray-400 font-normal ml-1">— เลือกจาก Master Data หรือพิมพ์ใหม่</span>
+                  }
                 </label>
                 <div className="relative">
                   <input
                     type="text"
-                    list="project-name-datalist"
+                    list={form.sourceOppId ? undefined : 'project-name-datalist'}
                     value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    readOnly={!!form.sourceOppId}
+                    onChange={e => { if (form.sourceOppId) return; setForm({ ...form, name: e.target.value }) }}
                     placeholder="เลือกหรือพิมพ์ชื่อโครงการ..."
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3875]/20"
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3875]/20 ${form.sourceOppId ? 'bg-green-50 border-green-200 text-green-800 cursor-not-allowed' : 'border-gray-200'}`}
                   />
-                  <datalist id="project-name-datalist">
-                    {(projectNameOptions || []).filter(p => p.isActive).map(p => (
-                      <option key={p.id} value={p.name} />
-                    ))}
-                  </datalist>
+                  {!form.sourceOppId && (
+                    <datalist id="project-name-datalist">
+                      {(projectNameOptions || []).filter(p => p.isActive).map(p => (
+                        <option key={p.id} value={p.name} />
+                      ))}
+                    </datalist>
+                  )}
                 </div>
-                {(projectNameOptions || []).filter(p => p.isActive).length === 0 && (
+                {!form.sourceOppId && (projectNameOptions || []).filter(p => p.isActive).length === 0 && (
                   <p className="text-xs text-gray-400 mt-1">ยังไม่มีชื่อโครงการใน Master Data — <a href="/master" className="text-[#1B3875] underline">เพิ่มได้ที่ Master Data</a></p>
                 )}
               </div>

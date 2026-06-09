@@ -609,7 +609,7 @@ export default function CustomerPortalPage() {
             </div>
           </div>
           <p className="text-center text-white/50 text-xs mt-4">
-            {tp.footer}
+            {tp.footer} <span className="text-white/30">v1.09</span>
           </p>
         </div>
       </div>
@@ -972,7 +972,7 @@ export default function CustomerPortalPage() {
 
         <div className="text-center text-xs text-gray-400 py-4 border-t border-gray-200">
           <p>{tp.helpFooter} <a href="tel:020962377" className="text-[#E84B0F] font-semibold hover:underline">02-096-2377 {portalLang === 'th' ? 'กด 4' : 'ext. 4'}</a> {tp.available247}</p>
-          <p className="mt-1">{tp.footer.replace('· 24/7: 02-096-2377 กด 4', '')} · <a href="/" className="hover:underline text-gray-400">{tp.staffLogin.replace(' →','')}</a></p>
+          <p className="mt-1">{tp.footer.replace('· 24/7: 02-096-2377 กด 4', '')} · <a href="/" className="hover:underline text-gray-400">{tp.staffLogin.replace(' →','')}</a> <span className="text-gray-300">v1.09</span></p>
         </div>
       </div>
     </div>

@@ -130,6 +130,10 @@ export default function Sidebar() {
           <ArrowRightOnRectangleIcon className="w-5 h-5 flex-shrink-0" />
           {!collapsed && <span>{t.nav.logout}</span>}
         </button>
+        {/* Version */}
+        {!collapsed && (
+          <p className="text-center text-white/25 text-[10px] pt-1 select-none">v1.09</p>
+        )}
       </div>
     </aside>
   )

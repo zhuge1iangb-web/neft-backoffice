@@ -182,7 +182,7 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center mt-4 space-y-1">
-          <p className="text-white/50 text-xs">© 2026 NEFT Solution Co., Ltd.</p>
+          <p className="text-white/50 text-xs">© 2026 NEFT Solution Co., Ltd. <span className="text-white/30">v1.09</span></p>
           <a href="/customer-portal" className="inline-block text-blue-300 hover:text-white text-xs underline underline-offset-2 transition-colors">
             {lang === 'th' ? '🏥 ลูกค้า / Customer Portal →' : '🏥 Customer Portal →'}
           </a>

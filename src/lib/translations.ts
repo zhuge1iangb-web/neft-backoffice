@@ -67,12 +67,12 @@ export const translations = {
     login: {
       title: 'เข้าสู่ระบบ',
       subtitle: 'NEFT Backoffice System',
-      username: 'ชื่อผู้ใช้',
+      username: 'ชื่อผู้ใช้ หรือ อีเมล',
       password: 'รหัสผ่าน',
       loginBtn: 'เข้าสู่ระบบ',
       forgotPassword: 'ลืมรหัสผ่าน?',
       demoHint: 'Demo: admin / admin123',
-      loginFailed: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+      loginFailed: 'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง',
     },
     // Dashboard
     dashboard: {

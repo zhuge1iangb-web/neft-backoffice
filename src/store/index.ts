@@ -1252,10 +1252,7 @@ export const useAppStore = create<AppState>()(
         const targets = get().salesTargets.map(t => t.id === id ? { ...t, ...data, updatedAt: new Date().toISOString() } : t)
         set({ salesTargets: targets })
         const updated = targets.find(t => t.id === id)
-        if (updated) updateRow('sales_targets', id, salesTargetToRow(updated), async () => {
-          const rows = await fetchTableRows('sales_targets', rowToSalesTarget)
-          if (rows) set({ salesTargets: rows })
-        })
+        if (updated) updateRow('sales_targets', id, salesTargetToRow(updated))
       },
       deleteSalesTarget: (id) => {
         set({ salesTargets: get().salesTargets.filter(t => t.id !== id) })
@@ -1292,12 +1289,6 @@ export const useAppStore = create<AppState>()(
           response_time_hours: data.responseTimeHours,
           resolution_time_hours: data.resolutionTimeHours,
           description: data.description,
-        }, async () => {
-          const rows = await fetchTableRows('cm_sla_options', (r: any) => ({
-            id: r.id, name: r.name, responseTimeHours: r.response_time_hours,
-            resolutionTimeHours: r.resolution_time_hours, description: r.description,
-          }))
-          if (rows) set({ cmSlaOptions: rows })
         })
       },
       deleteCmSla: (id) => {
@@ -1328,12 +1319,7 @@ export const useAppStore = create<AppState>()(
           p.id === id ? { ...p, ...data } : p
         )
         set({ projectNameOptions })
-        updateRow('project_name_options', id, { name: data.name, is_active: data.isActive }, async () => {
-          const rows = await fetchTableRows('project_name_options', (r: any) => ({
-            id: r.id, name: r.name, isActive: r.is_active, createdAt: r.created_at,
-          }))
-          if (rows) set({ projectNameOptions: rows })
-        })
+        updateRow('project_name_options', id, { name: data.name, is_active: data.isActive })
       },
       deleteProjectNameOption: (id) => {
         set({ projectNameOptions: get().projectNameOptions.filter(p => p.id !== id) })
@@ -1357,8 +1343,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ customers })
         const updated = customers.find(c => c.id === id)
-        if (updated) updateRow('customers', id, customerToRow(updated),
-          () => refetchInto('customers', rowToCustomer, 'customers', set))
+        if (updated) updateRow('customers', id, customerToRow(updated))
       },
       deleteCustomer: (id) => {
         const customers = get().customers.filter(c => c.id !== id)
@@ -1379,8 +1364,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ opportunities })
         const updated = opportunities.find(o => o.id === id)
-        if (updated) updateRow('opportunities', id, opportunityToRow(updated),
-          () => refetchInto('opportunities', rowToOpportunity, 'opportunities', set))
+        if (updated) updateRow('opportunities', id, opportunityToRow(updated))
       },
       deleteOpportunity: (id) => {
         const opportunities = get().opportunities.filter(o => o.id !== id)
@@ -1502,8 +1486,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ vendors })
         const updated = vendors.find(v => v.id === id)
-        if (updated) updateRow('vendors', id, vendorToRow(updated),
-          () => refetchInto('vendors', rowToVendor, 'vendors', set))
+        if (updated) updateRow('vendors', id, vendorToRow(updated))
       },
       deleteVendor: (id) => {
         const vendors = get().vendors.filter(v => v.id !== id)
@@ -1524,8 +1507,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ quotations })
         const updated = quotations.find(q => q.id === id)
-        if (updated) updateRow('quotations', id, quotationToRow(updated),
-          () => refetchInto('quotations', rowToQuotation, 'quotations', set))
+        if (updated) updateRow('quotations', id, quotationToRow(updated))
       },
       deleteQuotation: (id) => {
         const quotations = get().quotations.filter(q => q.id !== id)
@@ -1546,8 +1528,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ purchaseOrders })
         const updated = purchaseOrders.find(po => po.id === id)
-        if (updated) updateRow('purchase_orders', id, purchaseOrderToRow(updated),
-          () => refetchInto('purchase_orders', rowToPurchaseOrder, 'purchaseOrders', set))
+        if (updated) updateRow('purchase_orders', id, purchaseOrderToRow(updated))
       },
       deletePurchaseOrder: (id) => {
         const purchaseOrders = get().purchaseOrders.filter(po => po.id !== id)
@@ -1568,8 +1549,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ inventory })
         const updated = inventory.find(it => it.id === id)
-        if (updated) updateRow('inventory', id, inventoryToRow(updated),
-          () => refetchInto('inventory', rowToInventory, 'inventory', set))
+        if (updated) updateRow('inventory', id, inventoryToRow(updated))
       },
       deleteInventoryItem: (id) => {
         const inventory = get().inventory.filter(it => it.id !== id)
@@ -1612,8 +1592,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ invoices })
         const updated = invoices.find(i => i.id === id)
-        if (updated) updateRow('invoices', id, invoiceToRow(updated),
-          () => refetchInto('invoices', rowToInvoice, 'invoices', set))
+        if (updated) updateRow('invoices', id, invoiceToRow(updated))
       },
       deleteInvoice: (id) => {
         const invoices = get().invoices.filter(i => i.id !== id)
@@ -1709,8 +1688,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ contracts })
         const updated = contracts.find(c => c.id === id)
-        if (updated) updateRow('contracts', id, contractToRow(updated),
-          () => refetchInto('contracts', rowToContract, 'contracts', set))
+        if (updated) updateRow('contracts', id, contractToRow(updated))
       },
       deleteContract: (id) => {
         const contracts = get().contracts.filter(c => c.id !== id)
@@ -1732,8 +1710,7 @@ export const useAppStore = create<AppState>()(
         )
         set({ milestones })
         const updated = milestones.find(m => m.id === id)
-        if (updated) updateRow('milestones', id, milestoneToRow(updated),
-          () => refetchInto('milestones', rowToMilestone, 'milestones', set))
+        if (updated) updateRow('milestones', id, milestoneToRow(updated))
       },
       deleteMilestone: (id) => {
         const milestones = get().milestones.filter(m => m.id !== id)
@@ -1782,23 +1759,21 @@ export const useAppStore = create<AppState>()(
         set({ users })
         const updated = users.find(u => u.id === id)
         if (updated) {
-          // ส่งเฉพาะ field ที่เปลี่ยนแปลง (partial update) แทน full row
-          // เพื่อหลีกเลี่ยง Supabase reject เพราะ updated_at type mismatch
-          const patch: Record<string, any> = {}
-          const row = userToRow(updated)
+          // ส่งเฉพาะ field ที่เปลี่ยนแปลง (partial patch) — ไม่ refetch หลัง write
+          // เพราะ optimistic state ถูกอยู่แล้ว และ refetch อาจดึงค่าเก่ากลับมาทับ
+          // (Realtime subscription จะ sync ค่าจาก DB มาเองถ้า realtime เปิดอยู่)
           const dataAny = data as any
-          if (dataAny.password !== undefined)   patch.password   = row.password
-          if (dataAny.name !== undefined)       patch.name       = row.name
-          if (dataAny.role !== undefined)       patch.role       = row.role
-          if (dataAny.department !== undefined) patch.department = row.department
-          if (dataAny.email !== undefined)      patch.email      = row.email
-          if (dataAny.active !== undefined)     patch.active     = row.active
-          if (dataAny.lastLogin !== undefined)  patch.last_login = row.last_login
-          if (dataAny.username !== undefined)   patch.username   = row.username
-          // fallback ส่ง full row ถ้า patch ว่าง
-          const payload = Object.keys(patch).length > 0 ? patch : row
-          updateRow('users', id, payload,
-            () => refetchInto('users', rowToUser, 'users', set))
+          const patch: Record<string, any> = {}
+          if (dataAny.password !== undefined)   patch.password   = dataAny.password
+          if (dataAny.name !== undefined)       patch.name       = dataAny.name
+          if (dataAny.role !== undefined)       patch.role       = dataAny.role
+          if (dataAny.department !== undefined) patch.department = dataAny.department
+          if (dataAny.email !== undefined)      patch.email      = dataAny.email
+          if (dataAny.active !== undefined)     patch.active     = dataAny.active
+          if (dataAny.lastLogin !== undefined)  patch.last_login = dataAny.lastLogin
+          if (dataAny.username !== undefined)   patch.username   = dataAny.username
+          const payload = Object.keys(patch).length > 0 ? patch : userToRow(updated)
+          updateRow('users', id, payload) // ไม่มี onDone refetch
         }
       },
       deleteUser: (id) => {
@@ -1822,8 +1797,9 @@ export const useAppStore = create<AppState>()(
         )
         set({ customerPortalAccounts })
         const updated = customerPortalAccounts.find(a => a.id === id)
-        if (updated) updateRow('customer_portal_accounts', id, customerPortalAccountToRow(updated),
-          () => refetchInto('customer_portal_accounts', rowToCustomerPortalAccount, 'customerPortalAccounts', set))
+        // ไม่ refetch หลัง write — optimistic state ถูกอยู่แล้ว
+        // refetch อาจดึงค่าเก่ากลับมาทับก่อน DB commit เสร็จ
+        if (updated) updateRow('customer_portal_accounts', id, customerPortalAccountToRow(updated))
       },
       deleteCustomerPortalAccount: (id) => {
         const customerPortalAccounts = get().customerPortalAccounts.filter(a => a.id !== id)

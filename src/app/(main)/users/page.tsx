@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '@/store'
 import type { CustomerPortalAccount } from '@/store'
 import { translations } from '@/lib/translations'
@@ -137,6 +137,21 @@ export default function UsersPage() {
   const [newCustCreated, setNewCustCreated] = useState<CustomerPortalAccount | null>(null)
   const [custForm, setCustForm] = useState({ name: '', email: '', customerId: '', password: '' })
   const [deleteCustConfirm, setDeleteCustConfirm] = useState<number | null>(null)
+  // ── Portal account reset password state ─────────────────────────────────
+  const [showPortalResetPw, setShowPortalResetPw] = useState<number | null>(null)
+  const [newPortalResetPw, setNewPortalResetPw] = useState('')
+
+  // ── Toast notification ───────────────────────────────────────────────────
+  const [toastMsg, setToastMsg] = useState<string | null>(null)
+  const [toastVisible, setToastVisible] = useState(false)
+  useEffect(() => {
+    if (toastMsg) {
+      setToastVisible(true)
+      const t = setTimeout(() => setToastVisible(false), 3000)
+      const t2 = setTimeout(() => setToastMsg(null), 3400)
+      return () => { clearTimeout(t); clearTimeout(t2) }
+    }
+  }, [toastMsg])
 
   const filteredStaff = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -156,6 +171,7 @@ export default function UsersPage() {
 
   const flashSuccess = (msg: string) => {
     setStaffSuccess(msg); setTimeout(() => setStaffSuccess(null), 3500)
+    setToastMsg(msg)
   }
 
   // ── STAFF CRUD ──────────────────────────────────────────────────────────
@@ -191,10 +207,18 @@ export default function UsersPage() {
     flashSuccess('ลบ account เรียบร้อย')
   }
 
+  // reset password สำหรับ staff (backoffice users table)
   const handleResetPassword = (id: number) => {
-    updateCustomerPortalAccount(id, { password: newResetPw })
-    flashSuccess('รีเซ็ตรหัสผ่านเรียบร้อย — แจ้ง password ใหม่ให้ลูกค้าด้วย')
+    updateUser(id, { password: newResetPw } as any)
+    flashSuccess('รีเซ็ตรหัสผ่านเรียบร้อย — แจ้ง password ใหม่ให้พนักงานด้วย')
     setShowResetPw(null); setNewResetPw('')
+  }
+
+  // reset password สำหรับ customer portal accounts
+  const handleResetPortalPassword = (id: number) => {
+    updateCustomerPortalAccount(id, { password: newPortalResetPw })
+    flashSuccess('รีเซ็ตรหัสผ่าน Customer Portal เรียบร้อย — แจ้ง password ใหม่ให้ลูกค้าด้วย')
+    setShowPortalResetPw(null); setNewPortalResetPw('')
   }
 
   const toggleStaffActive = (id: number) => {
@@ -263,7 +287,21 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-4">
-      {/* Success banner */}
+      {/* ── Toast notification (มุมขวาบน slide-in) ── */}
+      {toastMsg && (
+        <div
+          className="fixed top-5 right-5 z-[9999] flex items-center gap-3 bg-white border border-green-200 shadow-xl rounded-xl px-4 py-3 max-w-sm transition-all duration-300"
+          style={{ transform: toastVisible ? 'translateX(0)' : 'translateX(120%)', opacity: toastVisible ? 1 : 0 }}
+        >
+          <CheckCircleIcon className="w-5 h-5 text-green-500 flex-shrink-0" />
+          <span className="text-sm text-gray-800 font-medium">{toastMsg}</span>
+          <button onClick={() => { setToastVisible(false); setTimeout(() => setToastMsg(null), 300) }} className="ml-auto text-gray-400 hover:text-gray-600 flex-shrink-0">
+            <XMarkIcon className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Success banner (เดิม — ซ่อนไว้ ใช้ toast แทน) */}
       {staffSuccess && (
         <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
           <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -531,11 +569,17 @@ export default function UsersPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="px-4 py-2 border-t border-gray-50 bg-gray-50/50 flex items-center gap-2">
+                  <div className="px-4 py-2 border-t border-gray-50 bg-gray-50/50 flex items-center gap-2 flex-wrap">
                     {isAdmin && (
                       <button onClick={() => openEditCust(c)}
                         className="flex items-center gap-1 text-xs text-[#1B3875] hover:text-[#0F2654] px-2 py-1 rounded hover:bg-blue-50 transition-colors">
                         <PencilIcon className="w-3.5 h-3.5" />แก้ไขข้อมูลติดต่อ
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button onClick={() => { setShowPortalResetPw(c.id); setNewPortalResetPw(generatePassword()) }}
+                        className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 px-2 py-1 rounded hover:bg-orange-50 transition-colors">
+                        <KeyIcon className="w-3.5 h-3.5" />รีเซ็ต Password
                       </button>
                     )}
                     <button onClick={() => copyText(`Portal: https://neft-backofficev2.vercel.app/customer-portal\nEmail: ${c.email}\nPassword: ${c.password}`, c.id)}
@@ -558,6 +602,25 @@ export default function UsersPage() {
                       )
                     )}
                   </div>
+
+                  {/* Portal reset password form */}
+                  {showPortalResetPw === c.id && (
+                    <div className="mx-4 mb-3 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-2">
+                      <div className="text-xs font-semibold text-orange-700">รีเซ็ต Password สำหรับ {c.name} ({c.company})</div>
+                      <div className="flex gap-2">
+                        <input value={newPortalResetPw} onChange={e => setNewPortalResetPw(e.target.value)}
+                          className="flex-1 px-2 py-1.5 border border-orange-200 rounded text-xs font-mono focus:outline-none bg-white" />
+                        <button onClick={() => setNewPortalResetPw(generatePassword())}
+                          className="text-xs text-orange-600 hover:text-orange-800 px-2 py-1 border border-orange-200 rounded bg-white">สุ่ม</button>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => { setShowPortalResetPw(null); setNewPortalResetPw('') }}
+                          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1">ยกเลิก</button>
+                        <button onClick={() => handleResetPortalPassword(c.id)} disabled={!newPortalResetPw}
+                          className="text-xs text-white bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded disabled:opacity-50">บันทึก Password ใหม่</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}

@@ -1781,8 +1781,25 @@ export const useAppStore = create<AppState>()(
         )
         set({ users })
         const updated = users.find(u => u.id === id)
-        if (updated) updateRow('users', id, userToRow(updated),
-          () => refetchInto('users', rowToUser, 'users', set))
+        if (updated) {
+          // ส่งเฉพาะ field ที่เปลี่ยนแปลง (partial update) แทน full row
+          // เพื่อหลีกเลี่ยง Supabase reject เพราะ updated_at type mismatch
+          const patch: Record<string, any> = {}
+          const row = userToRow(updated)
+          const dataAny = data as any
+          if (dataAny.password !== undefined)   patch.password   = row.password
+          if (dataAny.name !== undefined)       patch.name       = row.name
+          if (dataAny.role !== undefined)       patch.role       = row.role
+          if (dataAny.department !== undefined) patch.department = row.department
+          if (dataAny.email !== undefined)      patch.email      = row.email
+          if (dataAny.active !== undefined)     patch.active     = row.active
+          if (dataAny.lastLogin !== undefined)  patch.last_login = row.last_login
+          if (dataAny.username !== undefined)   patch.username   = row.username
+          // fallback ส่ง full row ถ้า patch ว่าง
+          const payload = Object.keys(patch).length > 0 ? patch : row
+          updateRow('users', id, payload,
+            () => refetchInto('users', rowToUser, 'users', set))
+        }
       },
       deleteUser: (id) => {
         const users = get().users.filter(u => u.id !== id)

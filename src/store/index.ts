@@ -857,7 +857,10 @@ export const useAppStore = create<AppState>()(
           }
           set({ users })
         }
-        const user = users.find(u => u.username === username && u.password === password)
+        // รองรับ login ด้วย username หรือ email ก็ได้
+        const user = users.find(u =>
+          (u.username === username || u.email === username) && u.password === password
+        )
         if (user) { set({ currentUser: user }); return true }
         return false
       },

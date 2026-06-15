@@ -192,8 +192,8 @@ export default function UsersPage() {
   }
 
   const handleResetPassword = (id: number) => {
-    updateUser(id, { password: newResetPw } as any)
-    flashSuccess('รีเซ็ตรหัสผ่านเรียบร้อย — แจ้ง password ใหม่ให้พนักงานด้วย')
+    updateCustomerPortalAccount(id, { password: newResetPw })
+    flashSuccess('รีเซ็ตรหัสผ่านเรียบร้อย — แจ้ง password ใหม่ให้ลูกค้าด้วย')
     setShowResetPw(null); setNewResetPw('')
   }
 

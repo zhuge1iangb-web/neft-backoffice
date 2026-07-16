@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Toaster } from 'react-hot-toast'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -13,7 +14,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-sans bg-[#F4F6FA] min-h-screen">{children}</body>
+      <body className="font-sans bg-[#F4F6FA] min-h-screen">
+        {children}
+        <Toaster position="top-center" toastOptions={{ style: { fontFamily: 'Sarabun, sans-serif' } }} />
+      </body>
     </html>
   )
 }

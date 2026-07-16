@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import toast from 'react-hot-toast'
 import { supabase, hasSupabase } from '@/lib/supabase'
 import { notifyTicketEvent } from '@/lib/notify'
+import { hashPassword, isHashed, verifyPassword } from '@/lib/password'
 import {
   demoUsers, demoCustomers, demoOpportunities, demoProjects,
   demoMilestones, demoInvoices, demoTickets, demoContracts, demoNotifications,
@@ -144,14 +146,28 @@ interface AppState {
   deleteCustomerPortalAccount: (id: number) => void
 }
 
+// แจ้งเตือนผู้ใช้ทันทีเมื่อเขียนลง Supabase ไม่สำเร็จ — ก่อนหน้านี้ error ถูก
+// กลืนเงียบๆ ใน console ทำให้หน้าจอแสดงเหมือนบันทึกสำเร็จทั้งที่ข้อมูลไม่เคย
+// ถึงฐานข้อมูล (เช่นตอน Supabase ถูก pause) ผู้ใช้เพิ่งมารู้ตอนข้อมูล "หาย"
+function notifySyncError() {
+  if (typeof window !== 'undefined') {
+    toast.error(
+      'บันทึกข้อมูลไม่สำเร็จ — การเปลี่ยนแปลงล่าสุดอาจไม่ถูกเก็บ กรุณาลองใหม่หรือรีเฟรชหน้า',
+      { id: 'sync-error', duration: 8000 },
+    )
+  }
+}
+
 async function syncToSupabase(key: string, value: any) {
   if (!hasSupabase || !supabase) return
   try {
-    await supabase
+    const { error } = await supabase
       .from('app_data')
       .upsert({ key, value, updated_at: new Date().toISOString() })
+    if (error) throw error
   } catch (e) {
     console.error('Supabase sync error:', e)
+    notifySyncError()
   }
 }
 
@@ -357,6 +373,7 @@ async function insertTicketToSupabase(ticket: TicketRow, onNoChanged?: (newNo: s
       return
     } catch (e) {
       console.error('Supabase insert ticket error:', e)
+      notifySyncError()
       return
     }
   }
@@ -387,6 +404,7 @@ async function updateTicketInSupabase(id: number, data: Partial<TicketRow>, onDo
     onDone?.()
   } catch (e) {
     console.error('Supabase update ticket error:', e)
+    notifySyncError()
   }
 }
 
@@ -398,6 +416,7 @@ async function deleteTicketFromSupabase(id: number, onDone?: () => void) {
     onDone?.()
   } catch (e) {
     console.error('Supabase delete ticket error:', e)
+    notifySyncError()
   }
 }
 
@@ -409,6 +428,7 @@ async function insertWorkLogToSupabase(ticketId: number, log: TicketWorkLog, onD
     onDone?.()
   } catch (e) {
     console.error('Supabase insert work log error:', e)
+    notifySyncError()
   }
 }
 
@@ -779,7 +799,7 @@ async function insertRow(table: string, row: any, onDone?: () => void) {
     const { error } = await supabase.from(table).insert(row)
     if (error) throw error
     onDone?.()
-  } catch (e) { console.error(`Supabase insert ${table} error:`, e) }
+  } catch (e) { console.error(`Supabase insert ${table} error:`, e); notifySyncError() }
 }
 async function updateRow(table: string, id: number, row: any, onDone?: () => void) {
   if (!hasSupabase || !supabase) return
@@ -787,7 +807,7 @@ async function updateRow(table: string, id: number, row: any, onDone?: () => voi
     const { error } = await supabase.from(table).update(row).eq('id', id)
     if (error) throw error
     onDone?.()
-  } catch (e) { console.error(`Supabase update ${table} error:`, e) }
+  } catch (e) { console.error(`Supabase update ${table} error:`, e); notifySyncError() }
 }
 async function deleteRow(table: string, id: number, onDone?: () => void) {
   if (!hasSupabase || !supabase) return
@@ -795,7 +815,7 @@ async function deleteRow(table: string, id: number, onDone?: () => void) {
     const { error } = await supabase.from(table).delete().eq('id', id)
     if (error) throw error
     onDone?.()
-  } catch (e) { console.error(`Supabase delete ${table} error:`, e) }
+  } catch (e) { console.error(`Supabase delete ${table} error:`, e); notifySyncError() }
 }
 // Text-id variants — `notifications.id` is text (some real alerts use
 // string ids like "sla-alert-1"), so it can't use the numeric-id helpers.
@@ -805,7 +825,7 @@ async function updateRowByTextId(table: string, id: string, row: any, onDone?: (
     const { error } = await supabase.from(table).update(row).eq('id', id)
     if (error) throw error
     onDone?.()
-  } catch (e) { console.error(`Supabase update ${table} error:`, e) }
+  } catch (e) { console.error(`Supabase update ${table} error:`, e); notifySyncError() }
 }
 async function deleteRowByTextId(table: string, id: string, onDone?: () => void) {
   if (!hasSupabase || !supabase) return
@@ -813,7 +833,7 @@ async function deleteRowByTextId(table: string, id: string, onDone?: () => void)
     const { error } = await supabase.from(table).delete().eq('id', id)
     if (error) throw error
     onDone?.()
-  } catch (e) { console.error(`Supabase delete ${table} error:`, e) }
+  } catch (e) { console.error(`Supabase delete ${table} error:`, e); notifySyncError() }
 }
 
 // ---- Per-table refetch helpers (used as onDone callbacks) ------------------
@@ -857,10 +877,11 @@ export const useAppStore = create<AppState>()(
           }
           set({ users })
         }
-        // รองรับ login ด้วย username หรือ email ก็ได้
-        const user = users.find(u =>
-          (u.username === username || u.email === username) && u.password === password
-        )
+        // รองรับ login ด้วย username หรือ email ก็ได้ — เทียบชื่อก่อนแล้วค่อย
+        // verify รหัสผ่าน (bcrypt compare มี cost ต่อครั้ง ไม่ควรรันทุก user)
+        const user = users
+          .filter(u => u.username === username || u.email === username)
+          .find(u => verifyPassword(password, u.password))
         if (user) { set({ currentUser: user }); return true }
         return false
       },
@@ -1750,12 +1771,20 @@ export const useAppStore = create<AppState>()(
       // staff member can log in from any device (fixes the old localStorage-
       // only bug where addUser/updateUser changes never reached auth).
       addUser: (user) => {
+        // เก็บรหัสผ่านเป็น bcrypt hash เสมอ — plaintext อยู่แค่ในฟอร์มตอนสร้าง
+        if (user.password && !isHashed(user.password)) {
+          user = { ...user, password: hashPassword(user.password) }
+        }
         const users = [...get().users, user]
         set({ users })
         insertRow('users', userToRow(user),
           () => refetchInto('users', rowToUser, 'users', set))
       },
       updateUser: (id, data) => {
+        const dataIn = data as any
+        if (dataIn.password && !isHashed(dataIn.password)) {
+          data = { ...dataIn, password: hashPassword(dataIn.password) }
+        }
         const users = get().users.map(u =>
           u.id === id ? { ...u, ...(data as any) } : u
         )
@@ -1789,12 +1818,20 @@ export const useAppStore = create<AppState>()(
       // `customer_portal_accounts` table (jsonb columns for multi-value
       // contact fields), so logins/edits are consistent everywhere.
       addCustomerPortalAccount: (account) => {
+        // เก็บรหัสผ่านเป็น bcrypt hash เสมอ — caller โชว์ plaintext ครั้งแรก
+        // จาก object ของตัวเองก่อนส่งเข้ามา
+        if (account.password && !isHashed(account.password)) {
+          account = { ...account, password: hashPassword(account.password) }
+        }
         const customerPortalAccounts = [...get().customerPortalAccounts, account]
         set({ customerPortalAccounts })
         insertRow('customer_portal_accounts', customerPortalAccountToRow(account),
           () => refetchInto('customer_portal_accounts', rowToCustomerPortalAccount, 'customerPortalAccounts', set))
       },
       updateCustomerPortalAccount: (id, data) => {
+        if (data.password && !isHashed(data.password)) {
+          data = { ...data, password: hashPassword(data.password) }
+        }
         const customerPortalAccounts = get().customerPortalAccounts.map(a =>
           a.id === id ? { ...a, ...data } : a
         )

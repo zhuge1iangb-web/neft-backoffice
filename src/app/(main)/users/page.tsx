@@ -133,7 +133,6 @@ export default function UsersPage() {
     name: '', phones: [], emails: [], lineIds: [], lineNotifyTokens: [], notifyViaEmail: false, notifyViaLine: false,
   })
   const [copiedId, setCopiedId] = useState<number | null>(null)
-  const [showPassId, setShowPassId] = useState<number | null>(null)
   const [newCustCreated, setNewCustCreated] = useState<CustomerPortalAccount | null>(null)
   const [custForm, setCustForm] = useState({ name: '', email: '', customerId: '', password: '' })
   const [deleteCustConfirm, setDeleteCustConfirm] = useState<number | null>(null)
@@ -184,14 +183,16 @@ export default function UsersPage() {
 
   const openEditStaff = (u: typeof users[number]) => {
     setEditingStaff(u)
-    setStaffForm({ name: u.name, username: u.username, email: u.email, password: u.password, role: u.role, department: u.department, active: u.active })
+    // password ในฟอร์มเว้นว่าง = ไม่เปลี่ยนรหัสผ่าน (DB เก็บเป็น hash แสดงกลับไม่ได้)
+    setStaffForm({ name: u.name, username: u.username, email: u.email, password: '', role: u.role, department: u.department, active: u.active })
     setShowStaffPw(false)
     setShowStaffModal(true)
   }
 
   const handleSaveStaff = () => {
     if (editingStaff) {
-      updateUser(editingStaff.id, staffForm as any)
+      const { password, ...rest } = staffForm
+      updateUser(editingStaff.id, (password ? { ...rest, password } : rest) as any)
       flashSuccess(`อัพเดทข้อมูล "${staffForm.name}" เรียบร้อย`)
     } else {
       const newUser = { id: Date.now(), ...staffForm, lastLogin: null as any }
@@ -518,13 +519,8 @@ export default function UsersPage() {
                       <div>
                         <span className="text-gray-400">Password</span>
                         <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-xs font-mono text-gray-500">{showPassId === c.id ? c.password : '••••••••'}</span>
-                          <button onClick={() => setShowPassId(showPassId === c.id ? null : c.id)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
-                            {showPassId === c.id ? <EyeSlashIcon className="w-3.5 h-3.5" /> : <EyeIcon className="w-3.5 h-3.5" />}
-                          </button>
-                          <button onClick={() => copyText(c.password, c.id * 100)} className="text-gray-400 hover:text-[#1B3875] flex-shrink-0">
-                            <ClipboardDocumentIcon className="w-3 h-3" />
-                          </button>
+                          {/* รหัสผ่านเก็บเป็น hash — แสดง/คัดลอกกลับไม่ได้ ใช้ปุ่มรีเซ็ตแทน */}
+                          <span className="text-xs font-mono text-gray-500">••••••••</span>
                         </div>
                       </div>
                     </div>
@@ -582,10 +578,10 @@ export default function UsersPage() {
                         <KeyIcon className="w-3.5 h-3.5" />รีเซ็ต Password
                       </button>
                     )}
-                    <button onClick={() => copyText(`Portal: https://neft-backofficev2.vercel.app/customer-portal\nEmail: ${c.email}\nPassword: ${c.password}`, c.id)}
+                    <button onClick={() => copyText(`Portal: https://neft-backofficev2.vercel.app/customer-portal\nEmail: ${c.email}`, c.id)}
                       className="flex items-center gap-1 text-xs text-gray-500 hover:text-[#1B3875] px-2 py-1 rounded hover:bg-blue-50 transition-colors">
                       <ClipboardDocumentIcon className="w-3.5 h-3.5" />
-                      {copiedId === c.id ? 'คัดลอกแล้ว!' : 'Copy Credentials'}
+                      {copiedId === c.id ? 'คัดลอกแล้ว!' : 'Copy Link + Email'}
                     </button>
                     {isAdmin && (
                       deleteCustConfirm === c.id ? (

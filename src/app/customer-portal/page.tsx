@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useAppStore } from '@/store'
 import { supabase, hasSupabase } from '@/lib/supabase'
+import { verifyPassword } from '@/lib/password'
 import type { WorkLog } from '@/lib/demo-data'
 import type { CustomerPortalAccount } from '@/store'
 import {
@@ -308,14 +309,15 @@ export default function CustomerPortalPage() {
     // serve stale/local-only credentials).
     if (hasSupabase && supabase) {
       try {
+        // ดึงด้วย email แล้ว verify รหัสผ่านฝั่ง client (bcrypt hash) —
+        // เทียบ password ตรงๆ ใน query ไม่ได้แล้วเพราะ DB เก็บเป็น hash
         const { data } = await supabase
           .from('customer_portal_accounts')
           .select('*')
           .eq('email', emailNorm)
-          .eq('password', password)
           .eq('active', true)
           .maybeSingle()
-        if (data) {
+        if (data && verifyPassword(password, data.password)) {
           cred = {
             id: data.id, name: data.name, company: data.company, email: data.email,
             password: data.password, customerId: data.customer_id, active: data.active,
@@ -332,7 +334,7 @@ export default function CustomerPortalPage() {
       // Supabase not configured (local/offline dev) — fall back to the
       // store's in-memory list (populated from the same table on init).
       cred = customerPortalAccounts.find(c =>
-        c.email === emailNorm && c.password === password && c.active
+        c.email === emailNorm && c.active && verifyPassword(password, c.password)
       )
     }
 
